@@ -2,6 +2,6 @@
 
 int main()
 {
-	syscall(__NR__ptree);
+	syscall(__NR_ptree);
 	return 0;
 }
