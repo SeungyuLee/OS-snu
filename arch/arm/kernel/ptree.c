@@ -57,7 +57,7 @@ void process_node(struct prinfo *buf, struct task_struct *task) {
 	newPrinfo.next_sibling_pid = 0;
 	newPrinfo.uid = task_uid(task);
 	strncpy(newPrinfo.comm, task->comm, 60);
-	if (has_child(task)) {
+	if (has_children(task)) {
 		struct task_struct *first_child = list_entry(task->children.next, struct task_struct, sibling);
 		newPrinfo.first_child_pid = first_child->pid;
 	}
@@ -80,13 +80,9 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 		}
 		process_count += 1;
 	}
-	if(has_child(task)) {
-		do_dfsearch(list_entry(task->children.next,struct task_struct,sibling),buf,nr);
+	foreach(child in task->childeren) {
+		do_dfsearch(list_entry(child,struct task_struct,sibling),buf,nr);
 	}
-	if(has_sibling(task)) {
-		do_dfsearch(list_entry(task->sibling.next,struct task_struct,sibling),buf,nr);
-	}
-
 }
 
 bool is_process(struct task_struct *task) {
