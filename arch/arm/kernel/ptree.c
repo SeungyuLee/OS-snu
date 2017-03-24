@@ -6,15 +6,18 @@
 #include <linux/prinfo.h>
 #include <linux/slab.h> // for usage of kcalloc and kfree
 
+int process_count = 0;
+
 asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 {
 	int result;
 	void do_dfsearch(struct task_struct *t, struct prinfo *b, int *n);
 
-	printk(KERN_EMERG "HelloWorld!\n");
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
 	int k_nr = 0;
 
+	if (buf == NULL || nr == NULL || *nr < 1)
+		return -EINVAL;
 	if(copy_from_user(k_buf, buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
 	if(copy_from_user(&k_nr, nr, sizeof(int))!=0)
@@ -24,7 +27,9 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	do_dfsearch(&init_task,k_buf, &k_nr);
 	read_unlock(&tasklist_lock);
 
-	printk(KERN_EMERG "dfs end\n");
+	if (k_nr > process_count) {
+		k_nr = process_count;
+	}
 	if(copy_to_user(buf, k_buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
 	if(copy_to_user(nr, &k_nr, sizeof(int))!=0)
@@ -32,12 +37,8 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	
 	kfree(k_buf);
 	
-	printk(KERN_EMERG "ByeWorld!\n");
-	return 0;
+	return process_count;
 }
-
-int process_count = 0;
-int buf_idx = 0;
 
 bool has_child(struct task_struct *task) {
 	return !list_empty(&task->children);
@@ -74,7 +75,6 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 	if(NULL == task)
 		return;
 	if(is_process(task) && 0 != task->pid) {
-		printk(KERN_EMERG "%d task is process\n",task->pid);
 		if (process_count < *nr) {
 			process_node(buf,task);
 		}
