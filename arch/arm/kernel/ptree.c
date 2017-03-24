@@ -13,20 +13,20 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 
 	printk(KERN_EMERG "HelloWorld!\n");
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
-	int *k_nr = kcalloc(1, sizeof(int), GFP_KERNEL);
+	int k_nr;
 
 	if(copy_from_user(k_buf, buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
-	if(get_user(k_nr, nr)!=0)
+	if(get_user(&k_nr, nr)!=0)
 		return -EFAULT;
 
 	read_lock(&tasklist_lock);
-	do_dfsearch(&init_task,k_buf, k_nr);
+	do_dfsearch(&init_task,k_buf, &k_nr);
 	read_unlock(&tasklist_lock);
 
 	if(copy_to_user(buf, k_buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
-	if(put_user(nr, k_nr)!=0)
+	if(put_user(nr, &k_nr)!=0)
 		return -EFAULT;
 	
 	kfree(k_buf);
