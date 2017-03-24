@@ -10,7 +10,6 @@ int process_count = 0;
 
 asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 {
-	int result;
 	void do_dfsearch(struct task_struct *t, struct prinfo *b, int *n);
 
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
@@ -58,7 +57,7 @@ void process_node(struct prinfo *buf, struct task_struct *task) {
 	newPrinfo.next_sibling_pid = 0;
 	newPrinfo.uid = task_uid(task);
 	strncpy(newPrinfo.comm, task->comm, 60);
-	if (has_children(task)) {
+	if (has_child(task)) {
 		struct task_struct *first_child = list_entry(task->children.next, struct task_struct, sibling);
 		newPrinfo.first_child_pid = first_child->pid;
 	}
@@ -80,7 +79,8 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 		}
 		process_count += 1;
 	}
-	foreach(child in task->childeren) {
+	struct list_head *child = NULL;
+	list_for_each(child, &task->children) {
 		do_dfsearch(list_entry(child,struct task_struct,sibling),buf,nr);
 	}
 }
