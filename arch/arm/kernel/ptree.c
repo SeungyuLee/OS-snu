@@ -30,7 +30,6 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 		return -EFAULT;
 	
 	kfree(k_buf);
-	kfree(k_nr);
 	
 	printk(KERN_EMERG "ByeWorld!\n");
 	return 0;
