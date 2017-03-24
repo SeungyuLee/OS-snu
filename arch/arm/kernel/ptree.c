@@ -89,9 +89,13 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 		process_count += 1;
 	}
 	if(has_child(task)) {
+		struct task_struct *tmp = list_entry(&task->children.next);
+		printk(KERN_EMERG "child pid = %d",tmp->pid);
 		do_dfsearch(list_entry(&task->children.next,struct task_struct,sibling),buf,nr);
 	}
-	if(has_sibling(task)) {
+	if(has_sibling(task)) {i
+		struct task_struct *tmp = list_entry(&task->sibling.next);
+		printk(KERN_EMERG "sibling pid = %d",tmp->pid);
 		do_dfsearch(list_entry(&task->sibling.next,struct task_struct,sibling),buf,nr);
 	}
 
