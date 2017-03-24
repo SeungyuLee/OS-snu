@@ -13,7 +13,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 
 	printk(KERN_EMERG "HelloWorld!\n");
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
-	int k_nr;
+	int k_nr = 0;
 
 	if(copy_from_user(k_buf, buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
@@ -24,6 +24,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	do_dfsearch(&init_task,k_buf, &k_nr);
 	read_unlock(&tasklist_lock);
 
+	printk(KERN_EMERG "dfs end\n");
 	if(copy_to_user(buf, k_buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
 	if(copy_to_user(nr, &k_nr, sizeof(int))!=0)
@@ -48,30 +49,22 @@ bool has_sibling(struct task_struct *task) {
 }
 
 void process_node(struct prinfo *buf, struct task_struct *task) {
-	printk(KERN_EMERG "start processing\n");
 	struct prinfo newPrinfo;
 	newPrinfo.state = task->state;
-	printk(KERN_EMERG "state ok\n");
 	newPrinfo.pid = task->pid;
-	printk(KERN_EMERG "pid ok\n");
 	newPrinfo.parent_pid = task->parent->pid;
-	printk(KERN_EMERG "parent pid ok\n");
 	newPrinfo.first_child_pid = 0;
 	newPrinfo.next_sibling_pid = 0;
 	newPrinfo.uid = task_uid(task);
-	printk(KERN_EMERG "uid ok\n");
 	strncpy(newPrinfo.comm, task->comm, 60);
-	printk(KERN_EMERG "comm ok\n");
 	if (has_child(task)) {
 		struct task_struct *first_child = list_entry(task->children.next, struct task_struct, sibling);
 		newPrinfo.first_child_pid = first_child->pid;
 	}
-	printk(KERN_EMERG "first_child ok\n");
 	if(has_sibling(task)) {
 		struct task_struct *next_sibling = list_entry(task->sibling.next, struct task_struct, sibling);
 		newPrinfo.next_sibling_pid = next_sibling->pid;
 	}
-	printk(KERN_EMERG "sibling ok\n");
 	buf[process_count] = newPrinfo;
 }
 
@@ -80,7 +73,6 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 
 	if(NULL == task)
 		return;
-	printk(KERN_EMERG "task pid = %d",task->pid);
 	if(is_process(task) && 0 != task->pid) {
 		printk(KERN_EMERG "%d task is process\n",task->pid);
 		if (process_count < *nr) {
@@ -89,14 +81,10 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 		process_count += 1;
 	}
 	if(has_child(task)) {
-		struct task_struct *tmp = list_entry(&task->children.next);
-		printk(KERN_EMERG "child pid = %d",tmp->pid);
-		do_dfsearch(list_entry(&task->children.next,struct task_struct,sibling),buf,nr);
+		do_dfsearch(list_entry(task->children.next,struct task_struct,sibling),buf,nr);
 	}
-	if(has_sibling(task)) {i
-		struct task_struct *tmp = list_entry(&task->sibling.next);
-		printk(KERN_EMERG "sibling pid = %d",tmp->pid);
-		do_dfsearch(list_entry(&task->sibling.next,struct task_struct,sibling),buf,nr);
+	if(has_sibling(task)) {
+		do_dfsearch(list_entry(task->sibling.next,struct task_struct,sibling),buf,nr);
 	}
 
 }
