@@ -52,20 +52,27 @@ void process_node(struct prinfo *buf, struct task_struct *task) {
 	printk(KERN_EMERG "start processing");
 	struct prinfo newPrinfo;
 	newPrinfo.state = task->state;
+	printk(KERN_EMERG "state ok");
 	newPrinfo.pid = task->pid;
+	printk(KERN_EMERG "pid ok");
 	newPrinfo.parent_pid = task->parent->pid;
+	printk(KERN_EMERG "parent pid ok");
 	newPrinfo.first_child_pid = 0;
 	newPrinfo.next_sibling_pid = 0;
 	newPrinfo.uid = task_uid(task);
+	printk(KERN_EMERG "uid ok");
 	strncpy(newPrinfo.comm, task->comm, 60);
+	printk(KERN_EMERG "comm ok");
 	if (has_child(task)) {
 		struct task_struct *first_child = list_entry(task->children.next, struct task_struct, sibling);
 		newPrinfo.first_child_pid = first_child->pid;
 	}
+	printk(KERN_EMERG "first_child ok");
 	if(has_sibling(task)) {
 		struct task_struct *next_sibling = list_entry(task->sibling.next, struct task_struct, sibling);
 		newPrinfo.next_sibling_pid = next_sibling->pid;
 	}
+	printk(KERN_EMERG "sibling ok");
 	buf[process_count] = newPrinfo;
 }
 
@@ -74,7 +81,7 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 
 	if(NULL == task)
 		return;
-	if(is_process(task) || 0 == task->pid) {
+	if(is_process(task) && 0 != task->pid) {
 		printk(KERN_EMERG "%d task is process",task->pid);
 		if (process_count < *nr) {
 			process_node(buf,task);
