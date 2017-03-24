@@ -17,7 +17,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 
 	if(copy_from_user(k_buf, buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
-	if(get_user(&k_nr, nr)!=0)
+	if(copy_from_user(&k_nr, nr, sizeof(int))!=0)
 		return -EFAULT;
 
 	read_lock(&tasklist_lock);
@@ -26,7 +26,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 
 	if(copy_to_user(buf, k_buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
-	if(put_user(nr, &k_nr)!=0)
+	if(copy_to_user(nr, &k_nr, sizeof(int))!=0)
 		return -EFAULT;
 	
 	kfree(k_buf);
