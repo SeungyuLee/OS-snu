@@ -13,22 +13,26 @@ int main()
 	int *nr = &num;
 
 	int result = syscall(380, buf, nr);
-	printf("ptree syscall returned with %d\n", result);
 	
 	int i, j;
-	int tap_num==0;
-	for(i=0; i<num; i=i+1){
-		printf("%s,%d,%ld,%d,%d,%d,%ld\n", buf[i].comm, buf[i].pid,
+	int tap_num=0;
+	for(i=0; i<*nr; i=i+1){
+		printf("%s,%d,%ld,%d,%d,%d,%d\n", buf[i].comm, buf[i].pid,
 				buf[i].state, buf[i].parent_pid, buf[i].first_child_pid,
 				buf[i].next_sibling_pid, buf[i].uid);
 
-		if(buf[i].first_child_pid == buf[i+1].pid) tap_number++;
-		if(buf[i].next_sibling_pid == 0) tap_number--;
+		if(buf[i].first_child_pid == buf[i+1].pid) tap_num++; // parent - child relationship
+		else if(buf[i].next_sibling_pid == buf[i].pid) {}
+		else if(buf[i].first_child_pid == 0 && 
+				buf[i].next_sibling_pid == 0) tap_num--;
+		else { }
 		
 		for(j=0; j<tap_num; j=j+1){
 			printf("\t");
 		}
 	}
+
+	printf("ptree system call returned with %d.\n", result);
 
 	return 0;
 }
