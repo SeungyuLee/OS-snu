@@ -11,6 +11,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	int result;
 	void do_dfsearch(struct task_struct *t, struct prinfo *b, int *n);
 
+	printk(KERN_EMERG "HelloWorld!\n");
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
 	int *k_nr = kcalloc(1, sizeof(int), GFP_KERNEL);
 
@@ -31,7 +32,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	kfree(k_buf);
 	kfree(k_nr);
 	
-	printk(KERN_EMERG "HelloWorld!\n");
+	printk(KERN_EMERG "ByeWorld!\n");
 	return 0;
 }
 
@@ -44,11 +45,11 @@ bool has_child(struct task_struct *task) {
 	 
 bool has_sibling(struct task_struct *task) {
 	struct list_head *head = &task->parent->children;
-	return !list_is_last(task->sibling,head);
+	return !list_is_last(&task->sibling,head);
 }
 
 void process_node(struct prinfo *buf, struct task_struct *task) {
-	printk("start processing");
+	printk(KERN_EMERG "start processing");
 	struct prinfo newPrinfo;
 	newPrinfo.state = task->state;
 	newPrinfo.pid = task->pid;
@@ -74,7 +75,7 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 	if(NULL == task)
 		return;
 	if(is_process(task) || 0 == task->pid) {
-		printk("%d task is process",task->pid);
+		printk(KERN_EMERG "%d task is process",task->pid);
 		if (process_count < *nr) {
 			process_node(buf,task);
 		}
