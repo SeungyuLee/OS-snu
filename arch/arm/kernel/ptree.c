@@ -39,7 +39,14 @@ int process_count = 0;
 int buf_idx = 0;
 
 void process_node(struct prinfo *buf, struct task_struct *task) {
-	
+	printk("start processing");
+	struct prinfo newPrinfo;
+	newPrinfo.state = task->state;
+	newPrinfo.pid = task->pid;
+	newPrinfo.parent_pid = task->parent->pid;
+	newPrinfo.uid = task_uid(task);
+	strncpy(newPrinfo.comm, task->comm, MAX_COMM);
+	buf[process_count] = newPrinfo;
 }
 
 void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
