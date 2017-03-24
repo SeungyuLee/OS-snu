@@ -13,7 +13,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 
 	printk(KERN_EMERG "HelloWorld!\n");
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
-	int k_nr;
+	int k_nr = 0;
 
 	if(copy_from_user(k_buf, buf, (*nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
@@ -89,10 +89,10 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 		process_count += 1;
 	}
 	if(has_child(task)) {
-		do_dfsearch(list_entry(&task->children.next,struct task_struct,sibling),buf,nr);
+		do_dfsearch(list_entry(task->children.next,struct task_struct,sibling),buf,nr);
 	}
 	if(has_sibling(task)) {
-		do_dfsearch(list_entry(&task->sibling.next,struct task_struct,sibling),buf,nr);
+		do_dfsearch(list_entry(task->sibling.next,struct task_struct,sibling),buf,nr);
 	}
 
 }
