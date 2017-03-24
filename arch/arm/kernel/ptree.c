@@ -38,14 +38,33 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 int process_count = 0;
 int buf_idx = 0;
 
+bool has_child(struct task_struct *task) {
+	return !list_empty(&task->children);
+}
+	 
+bool has_sibling(struct task_struct *task) {
+	struct list_head *head = &task->parent->children;
+	return !list_is_last(task->sibling,head);
+}
+
 void process_node(struct prinfo *buf, struct task_struct *task) {
 	printk("start processing");
 	struct prinfo newPrinfo;
 	newPrinfo.state = task->state;
 	newPrinfo.pid = task->pid;
 	newPrinfo.parent_pid = task->parent->pid;
+	newPrinfo.first_child_pid = 0;
+	newPrinfo.next_sibling_pid = 0;
 	newPrinfo.uid = task_uid(task);
 	strncpy(newPrinfo.comm, task->comm, 60);
+	if (has_child(task)) {
+		struct task_struct *first_child = list_entry(task->children.next, struct task_struct, sibling);
+		newPrinfo.first_child_pid = first_child->pid;
+	}
+	if(has_sibling(task)) {
+		struct task_struct *next_sibling = list_entry(task->sibling.next, struct task_struct, sibling);
+		newPrinfo.next_sibling_pid = next_sibling->pid;
+	}
 	buf[process_count] = newPrinfo;
 }
 
@@ -61,12 +80,10 @@ void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
 		}
 		process_count += 1;
 	}
-	struct list_head *children = &task->children;
-	if(false == list_empty(children)) {
-		do_dfsearch(list_entry(children->next,struct task_struct,sibling),buf,nr);
+	if(has_child(task)) {
+		do_dfsearch(list_entry(&task->children.next,struct task_struct,sibling),buf,nr);
 	}
-	struct list_head *head = &task->parent->children;
-	if(false == list_is_last(&task->sibling,head)) {
+	if(has_sibling(task)) {
 		do_dfsearch(list_entry(&task->sibling.next,struct task_struct,sibling),buf,nr);
 	}
 
