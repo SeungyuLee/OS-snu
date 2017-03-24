@@ -8,5 +8,6 @@ int main()
 {
 //	int result = ptree( , );
 	printf("user hello");
+	syscall(__NR_ptree);
 	return 0;
 }
