@@ -9,7 +9,7 @@
 asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 {
 	int result;
-	int do_dfsearch(struct prinfo *b, int *n);
+	void do_dfsearch(struct task_struct *t, struct prinfo *b, int *n);
 
 	struct prinfo *k_buf = kcalloc(*nr, sizeof(struct prinfo), GFP_KERNEL);
 	int *k_nr = kcalloc(1, sizeof(int), GFP_KERNEL);
@@ -45,27 +45,29 @@ void process_node(struct prinfo *buf, struct task_struct *task) {
 	newPrinfo.pid = task->pid;
 	newPrinfo.parent_pid = task->parent->pid;
 	newPrinfo.uid = task_uid(task);
-	strncpy(newPrinfo.comm, task->comm, MAX_COMM);
+	strncpy(newPrinfo.comm, task->comm, 60);
 	buf[process_count] = newPrinfo;
 }
 
 void do_dfsearch(struct task_struct *task, struct prinfo *buf, int *nr){
+	bool is_process(struct task_struct *t);
+
 	if(NULL == task)
 		return;
 	if(is_process(task) || 0 == task->pid) {
 		printk("%d task is process",task->pid);
-		if (process_count < nr) {
+		if (process_count < *nr) {
 			process_node(buf,task);
 		}
 		process_count += 1;
 	}
 	struct list_head *children = &task->children;
 	if(false == list_empty(children)) {
-		do_dfsearch(list_entry(children.next,struct task_struct,sibling));
+		do_dfsearch(list_entry(children->next,struct task_struct,sibling),buf,nr);
 	}
 	struct list_head *head = &task->parent->children;
-	if(false == list_is_last(task->sibling,head)) {
-		do_dfsearch(ist_entry(&task->sibling,struct task_struct,sibling));
+	if(false == list_is_last(&task->sibling,head)) {
+		do_dfsearch(list_entry(&task->sibling.next,struct task_struct,sibling),buf,nr);
 	}
 
 }
