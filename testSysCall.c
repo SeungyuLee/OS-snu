@@ -16,7 +16,7 @@ int main()
 	
 	int i, j;
 	int tap_num=0;
-	int relat_depth=0;
+	int relat_depth=1;
 	for(i=0; i<*nr; i=i+1){
 		printf("%s,%d,%ld,%d,%d,%d,%d\n", buf[i].comm, buf[i].pid,
 				buf[i].state, buf[i].parent_pid, buf[i].first_child_pid,
@@ -28,6 +28,7 @@ int main()
 			tap_num++; relat_depth++;
 		}else if((buf[i].first_child_pid == 0) && (buf[i].next_sibling_pid == 0)){
 			tap_num = tap_num - relat_depth;
+			relat_depth = 1;
 		}else { }
 
 		for(j=0; j<tap_num; j=j+1){
