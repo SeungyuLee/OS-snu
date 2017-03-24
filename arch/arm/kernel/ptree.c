@@ -6,7 +6,7 @@
 #include <linux/prinfo.h>
 #include <linux/slab.h> // for usage of kcalloc and kfree
 
-int process_count = 0;
+int process_count;
 
 asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 {
@@ -22,6 +22,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	if(copy_from_user(&k_nr, nr, sizeof(int))!=0)
 		return -EFAULT;
 
+	process_count = 0;
 	read_lock(&tasklist_lock);
 	do_dfsearch(&init_task,k_buf, &k_nr);
 	read_unlock(&tasklist_lock);
@@ -29,7 +30,7 @@ asmlinkage int sys_ptree(struct prinfo *buf, int *nr)
 	if (k_nr > process_count) {
 		k_nr = process_count;
 	}
-	if(copy_to_user(buf, k_buf, (*nr)*sizeof(struct prinfo))!=0)
+	if(copy_to_user(buf, k_buf, (k_nr)*sizeof(struct prinfo))!=0)
 		return -EFAULT;
 	if(copy_to_user(nr, &k_nr, sizeof(int))!=0)
 		return -EFAULT;
