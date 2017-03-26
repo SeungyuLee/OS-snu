@@ -110,7 +110,7 @@ added codes to be applicable in `arm` environment.
 	void process_node(struct prinfo *buf, struct task_struct *task)
 	```
 	
-	when the predefined global variable `process_count` is smaller than `nr`, the number of processes we need. After than, `process_count` is increased by 1.
+	when the predefined global variable `process_count` is smaller than `nr`, the number of processes we need. After that, `process_count` is increased by 1. Even if nr is smaller than the number of whole process, process_count should be increased until it reaches the number of whole process.
 
 	
 	```
@@ -120,7 +120,12 @@ added codes to be applicable in `arm` environment.
 	}
 	```
 	
-	// list_for_each / list_entry description //
+	This is a recursive call of do_dfsearch so that it goes down the tree with depth-first search and every process_node function in each do_dfsearch function stores each process information to "buf" array in preorder.
+
+* **Implemented Error Handling**
+
+	* `-EINVAL`: if `buf` or `nr` are null, or if the number of entries is less than 1.
+	* `-EFAULT`: if `buf` or `nr` are outside the accessible address space.
 
 ### 3. Test program
 
@@ -141,7 +146,7 @@ added codes to be applicable in `arm` environment.
 	```
 	"buf" is allocated in memory as size of *nr * sizeof(struct prinfo). *nr is pointing to &num which stores 100 (an arbitrary number).
 
-	(2) print process tree
+	(2) Print process tree
 
 	```
 	for(i=0; i<*nr; i=i+1){
@@ -152,14 +157,19 @@ added codes to be applicable in `arm` environment.
 	```
 		if((buf[i].first_child_pid == buf[i+1].pid) && (buf[i].next_sibling_pid!=0))
 			tap_num++; // when consecutive processes are in parent-child relationship and the parent has its sibling
-	 	else if((buf[i].first_child_pid == buf[i+1].pid) && (buf[i].next_sibling_pid==0)){
+	 	
+		else if((buf[i].first_child_pid == buf[i+1].pid) && (buf[i].next_sibling_pid==0)){
 		  	tap_num++; relat_depth++; // when consecutive process are in parent-child relationship and the parent has no siblings
-		}else if((buf[i].first_child_pid == 0) && (buf[i].next_sibling_pid == 0)){
+		}
+		
+		else if((buf[i].first_child_pid == 0) && (buf[i].next_sibling_pid == 0)){
 			tap_num = tap_num - relat_depth;
 			relat_depth = 1; // when the process has no children or siblings
-		}else;
+		}
+		
+		else;
 	```
-	print tabs
+	Print tabs
 
 	```
 		for(j=0; j<tap_num; j=j+1){
@@ -170,13 +180,13 @@ added codes to be applicable in `arm` environment.
 	
 
 
-* **Compile and Execute*
+* **Compile and Execute**
 
 	How to compile
 	```
 	~/linux-3.10-artik$ arm-linux-gnueabi-gcc -I/include TestSysCall.c -o test
 	```
-	push the test program
+	Push the test program
 	```
 	~/linux-3.10-artik$ push test /root/test
 	```
