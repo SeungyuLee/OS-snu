@@ -124,6 +124,70 @@ added codes to be applicable in `arm` environment.
 
 ### 3. Test program
 
+* **Location**
+	
+	TestSysCall.c file is located right below the root ("linux-3.10-artik/")
+
+* **Implementation**
+
+	(1) Call ptree system call
+
+	```
+	#define __NR_ptree 380
+	...
+	int result = syscall(380, buf, nr);
+	...
+	printf("ptree system call returned with %d.\n", result);
+	```
+	"buf" is allocated in memory as size of *nr * sizeof(struct prinfo). *nr is pointing to &num which stores 100 (an arbitrary number).
+
+	(2) print process tree
+
+	```
+	for(i=0; i<*nr; i=i+1){
+		printf("... as shown in project specification");
+	```
+	To add taps, we defined int tap_num=0, and int relat_depth=1 to store how many tabs they need and indicate their relative depth of each.
+
+	```
+		if((buf[i].first_child_pid == buf[i+1].pid) && (buf[i].next_sibling_pid!=0))
+			tap_num++; // when consecutive processes are in parent-child relationship and the parent has its sibling
+	 	else if((buf[i].first_child_pid == buf[i+1].pid) && (buf[i].next_sibling_pid==0)){
+		  	tap_num++; relat_depth++; // when consecutive process are in parent-child relationship and the parent has no siblings
+		}else if((buf[i].first_child_pid == 0) && (buf[i].next_sibling_pid == 0)){
+			tap_num = tap_num - relat_depth;
+			relat_depth = 1; // when the process has no children or siblings
+		}else;
+	```
+	print tabs
+
+	```
+		for(j=0; j<tap_num; j=j+1){
+			printf("\t");
+		}
+	}
+	```
+	
+
+
+* **Compile and Execute*
+
+	How to compile
+	```
+	~/linux-3.10-artik$ arm-linux-gnueabi-gcc -I/include TestSysCall.c -o test
+	```
+	push the test program
+	```
+	~/linux-3.10-artik$ push test /root/test
+	```
+	Execute (via artik)
+	```
+	root:~> ./test
+	```
+	Output Screenshot
+	
+	![ScreenShot](screenshot1.png?raw=true "result1")
+	![ScreenShot](screenshot2.png?raw=true "result2")
 
 ## Lessons
 
