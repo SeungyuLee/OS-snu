@@ -216,6 +216,8 @@ added codes to be applicable in `arm` environment.
 
 ## Lessons
 
+It was our first project, so we did not know how to get started and we had a lot of trial and error, but we are happy to finish the project.
+
 ## Team Members
 * Park yoonjong
 * Lee Nayoung
