@@ -121,6 +121,21 @@ added codes to be applicable in `arm` environment.
 	```
 	
 	This is a recursive call of do_dfsearch so that it goes down the tree with depth-first search and every process_node function in each do_dfsearch function stores each process information to "buf" array in preorder.
+	
+* **is_process**
+	```
+	if (thread_group_empty(task)) return true;
+	else	if(thread_group_leader(task)) return true;
+		else return false;
+	```
+
+* **process_node**
+	```
+	newPrinfo.state = task->state;
+	newPrinfo.pid = task->pid;
+	...
+	buf[process_count] = newPrinfo;
+	```
 
 * **Implemented Error Handling**
 
