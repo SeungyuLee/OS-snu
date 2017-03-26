@@ -216,7 +216,10 @@ added codes to be applicable in `arm` environment.
 
 ## Lessons
 
-It was our first project, so we did not know how to get started and we had a lot of trial and error, but we are happy to finish the project.
+* It was our first project, so we did not know how to get started and we had a lot of trial and error, but we are happy to finish the project.
+* We now know some basic things like how to look around kernel source codes and how to debug new kernel codes.
+* Since we were not used to do cooperative work in github, we had some mistakes so that written codes were just gone by a couple of times. We are getting familiar with it, though.
+* We now know that kernel panics can often happen while modifying kernel codes so we do not freak out with kernel panics anymore. 
 
 ## Team Members
 * Park yoonjong
