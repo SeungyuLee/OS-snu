@@ -21,12 +21,15 @@ static LIST_HEAD(waiting_lock_list);
 
 bool canLock(struct lock_struct *info) {
 	printk(KERN_EMEG "trying lock : %d %d %d",info->degreeStart,info->degreeEnd,info->type);
+	// 현재 degree와 비교 작업 먼저
 	list_for_each(head, current_lock_list) {
 		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
 		printk(KERN_EMEG "current lock : %d %d %d",lock->degreeStart, lock->degreeEnd,lock->type);
 		if ((lock->degreeStart <= info->degreeStart && lock->degreeEnd >= info->degreeStart) ||
 				(lock->degreeStart <= info->degreeEnd && lock->degreeEnd >= info->degreeEnd)) {
-			return false;
+			if (info->type == kWrite || lock->type == kWrite) {
+				return false;
+			}
 		}
 	}
 	if (info.type == kRead) {
@@ -36,6 +39,7 @@ bool canLock(struct lock_struct *info) {
 			if(lock->type == kWrite) {
 				if ((lock->degreeStart <= info->degreeStart && lock->degreeEnd >= info->degreeStart) ||
 						(lock->degreeStart <= info->degreeEnd && lock->degreeEnd >= info->degreeEnd)) {
+					// 위에 if에 lock이 degree를 포함하고 있는지도 검사
 					return false;
 				}
 			}
