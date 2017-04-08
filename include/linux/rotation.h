@@ -1,10 +1,13 @@
 #ifndef __ROTATION_H__
 #define __ROTATION_H__
 
-extern int rotation;
+#include <asm/atomic.h>
 
-void set_rot(int degree);
+extern atomic_t rotation;
+
+void set_rotation(int degree);
 
 int get_rotation(void);
 
+void exit_rotlock(void);
 #endif

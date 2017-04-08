@@ -5,7 +5,7 @@
 
 asmlinkage int sys_set_rotation(int degree)
 {
-	rotation = degree;
+	set_rotation(degree);
 	printk("[sys_set_rotation] Set Rotation: %d\n", get_rotation());
 	return 0;
 }
