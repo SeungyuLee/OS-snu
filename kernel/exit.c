@@ -719,7 +719,7 @@ void do_exit(long code)
 	struct task_struct *tsk = current;
 	int group_dead;
 
-	exit_rotlock();
+	exit_rotlock(tsk);
 
 	profile_task_exit(tsk);
 
