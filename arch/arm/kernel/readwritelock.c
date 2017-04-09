@@ -104,17 +104,21 @@ int lockProcess(int degree, int range, enum LockType type) {
 }
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
+	if(degree >= 360 || degree < 0) return -EINVAL;
 	return lockProcess(degree,range,kRead);
 }
 
 asmlinkage int sys_rotlock_write(int degree, int range) {
+	if(degree >= 360 || degree < 0) return -EINVAL;
 	return lockProcess(degree,range,kWrite);
 }
 
 asmlinkage int sys_rotunlock_read(int degree, int range) {
+	if(degree >= 360 || degree < 0) return -EINVAL;
 	return deleteFromList(current_lock_list, degree, range, kRead);
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
+	if(degree >= 360 || degree < 0) return -EINVAL;
 	return deleteFromList(current_lock_list, degree, range, kWrite);
 }
