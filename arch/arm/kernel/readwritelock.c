@@ -54,7 +54,6 @@ bool canLock(struct lock_struct *info) {
 	}
 
 	struct list_head *head;
-	spin_lock(&current_list_spinlock);	
 	list_for_each(head,&current_lock_list) {
 		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
 		printk(KERN_DEBUG "current lock : %d %d %d",lock->degree - lock->range, lock->degree + lock->range,lock->type);
@@ -64,7 +63,6 @@ bool canLock(struct lock_struct *info) {
 			}
 		}
 	}
-	spin_unlock(&current_list_spinlock);
 	if (info->type == kRead) {
 		list_for_each(head, &waiting_lock_list) {
 			struct lock_struct *lock = list_entry(head, struct lock_struct, list);
@@ -89,55 +87,49 @@ bool canLock(struct lock_struct *info) {
 	return true;
 }
 
-void insertIntoList(struct list_head *list, int degree, int range, enum LockType type) { 
-	list_for_each_entry_safe(head, list) {
-		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-		if(lock->degreeStart == degree - range && lock->degreeEnd == degree + range && lock->type == type) { 
-			atomic_inc(lock->count);
-			return;
-		}
-	}
-	// 락풀고
-	struct lock_struct *new_lock;
-	new_lock = kmalloc(sizeof(*read_lock), GFP_KERNEL);
-	new_lock->degreeStart = degree - range;
-	new_lock->degreeEnd = degree + range;
-	new_lock->type = &type;
-	atomic_set(new_lock->count, 1);
-	INIT_LIST_HEAD(&new_lock->list);
-	// 락해주고
-	list_add(&new_lock,&list);
-	// 락풀고
-}
-
-int deleteFromList(struct list_head *list, int degree, int range, enum LockType type) {
-	// 같은걸 지우지 않도록 락거는 시점이 중요
-	// 락해주고
-	list_for_each_entry_safe(head, list) {
-		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-		if(lock->degreeStart == degree - range && lock->degreeEnd == degree + range, lock->type == type) {
-			// 위와 마찬가지 이유로 count 락 걸지 않음
-			if(atomic_read(lock->count) > 1) {
-				atomic_dec(lock->count);
-			}else {
-				list_del(&lock->list);
-				kfree(lock);
-			}
-			// 락풀고
-			return 0;
-		}
-	}
-	// 락풀고
-	return -1;
-}
-
 int lockProcess(int degree, int range, enum LockType type) {
-	insertIntoList(wait_lock_list, degree, range, type);
-	// canLock이 가능해 질 때 까지 process 재우기
-	deleteFromList(wait_lock_list, degree, range, type);
-	
-	insertIntoList(current_lock_list, degree, range, type);
+	struct lock_struct *new_lock;
+	new_lock = kmalloc(sizeof(*new_lock), GFP_KERNEL);
+	new_lock->degree = degree;
+	new_lock->range = range;
+	new_lock->type = type;
+	new_lock->pid = getpid();
+	INIT_LIST_HEAD(&new_lock->list);
+	spin_lock(&waiting_list_spinlock);
+	list_add(&new_lock,&waiting_lock_list);
+	spin_unlock(&waiting_list_spinlock);
+	while(1) {
+		spin_lock(&current_list_spinlock);
+		spin_lock(&waiting_list_spinlock);
+		if(canLock(new_lock)) {
+			list_del(&newlock->list);
+			spin_unlock(&waiting_list_spinlock);
+			list_add(&new_lock,&current_lock_list);
+			spin_unlock(&current_list_spinlock);
+			break;
+		}else {
+			spin_unlock(&current_list_spinlock);
+			spin_unlock(&waiting_list_spinlock);
+			set_current_state(TASK_INTERRUPTIBLE);
+			schedule();
+		}
+	}
 	return 0;
+}
+
+int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무조건 락이 잡혀있다는 가정하에 작업
+	spin_lock(&current_list_spinlock);
+	struct list_head *head;
+	list_for_each(head, &current_lock_list) {
+		struct lock_struct *lock = list_entry(head,struct lock_struct, list);
+		if(lock->degree == degree && lock->range == range && lock->type == type && lock->pid == getpid() ) {
+			list_del(&lock->list);
+			kfree(&lock);
+		}
+	}
+	spin_unlock(&current_list_spinlock);
+
+	// 다른 프로세스들 깨워주는 함수 콜
 }
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
@@ -152,10 +144,10 @@ asmlinkage int sys_rotlock_write(int degree, int range) {
 
 asmlinkage int sys_rotunlock_read(int degree, int range) {
 	if(degree >= 360 || degree < 0) return -EINVAL;
-	return deleteFromList(current_lock_list, degree, range, kRead);
+	return deleteProcess(degree, range, kRead);
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
 	if(degree >= 360 || degree < 0) return -EINVAL;
-	return deleteFromList(current_lock_list, degree, range, kWrite);
+	return deleteProcess(degree, range, kWrite);
 }
