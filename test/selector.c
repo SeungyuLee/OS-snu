@@ -13,17 +13,19 @@ void intHandler(int dummy) {
 }
 
 int main(int argc){
-	FILE *p;
+	FILE *fp;
 	int inputInt = argc;
 	
 	signal(SIGINT, intHandler);
 	
 	while(keepRunning){
 		if(syscall(SYSCALL_ROTLOCK_WRITE, 0, 180) == 0){
+			fp = fopen("integer.text", "w");
 			fprintf(fp, "%d", inputInt);
 			printf("select: %d\n", inputInt);
 			inputInt++;
 			fclose(fp);
+			
 			syscall(SYSCALL_ROTUNNLOCK_WRITE, 0, 180);
 		}
 	}
