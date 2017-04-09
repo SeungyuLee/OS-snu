@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <sys/syscalls.h>
+#include <sys/syscall.h>
 
-#define SYSCALL_ROTLOCK_LEAD 381
-#define SYSCALL_ROTUNLOCK_LEAD 383
+#define SYSCALL_ROTLOCK_READ 381
+#define SYSCALL_ROTUNLOCK_READ 383
 
 static volatile int keepRunning = 1;
 
 void intHandler(int dummy){
-	keepRunnnig = 0;
+	keepRunning = 0;
 }
 
 void printFactor(int num){

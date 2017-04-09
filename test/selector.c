@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <sys/syscalls.h>
+#include <sys/syscall.h>
 
 #define SYSCALL_ROTLOCK_WRITE 382
 #define SYSCALL_ROTUNLOCK_WRITE 384
@@ -26,7 +26,7 @@ int main(int argc){
 			inputInt++;
 			fclose(fp);
 			
-			syscall(SYSCALL_ROTUNNLOCK_WRITE, 0, 180);
+			syscall(SYSCALL_ROTUNLOCK_WRITE, 0, 180);
 		}
 	}
 
