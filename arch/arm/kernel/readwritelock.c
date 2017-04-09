@@ -54,7 +54,6 @@ bool canLock(struct lock_struct *info) {
 	}
 
 	struct list_head *head;
-	spin_lock(&current_list_spinlock);	
 	list_for_each(head,&current_lock_list) {
 		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
 		printk(KERN_DEBUG "current lock : %d %d %d",lock->degree - lock->range, lock->degree + lock->range,lock->type);
@@ -64,7 +63,6 @@ bool canLock(struct lock_struct *info) {
 			}
 		}
 	}
-	spin_unlock(&current_list_spinlock);
 	if (info->type == kRead) {
 		list_for_each(head, &waiting_lock_list) {
 			struct lock_struct *lock = list_entry(head, struct lock_struct, list);
@@ -110,7 +108,7 @@ void insertIntoList(struct list_head *list, int degree, int range, enum LockType
 	// 락풀고
 }
 
-int deleteFromList(struct list_head *list, int degree, int range, enum LockType type) {
+int deleteFromList(struct list_head *list, struct lock_struct *lock) {
 	// 같은걸 지우지 않도록 락거는 시점이 중요
 	// 락해주고
 	list_for_each_entry_safe(head, list) {
@@ -132,11 +130,30 @@ int deleteFromList(struct list_head *list, int degree, int range, enum LockType 
 }
 
 int lockProcess(int degree, int range, enum LockType type) {
-	insertIntoList(wait_lock_list, degree, range, type);
-	// canLock이 가능해 질 때 까지 process 재우기
-	deleteFromList(wait_lock_list, degree, range, type);
-	
-	insertIntoList(current_lock_list, degree, range, type);
+	struct lock_struct *new_lock;
+	new_lock = kmalloc(sizeof(*new_lock), GFP_KERNEL);
+	new_lock->degree = degree;
+	new_lock->range = range;
+	new_lock->type = type;
+	INIT_LIST_HEAD(&new_lock->list);
+	spin_lock(&waiting_list_spinlock);
+	list_add(&new_lock,&waiting_lock_list);
+	spin_unlock(&waiting_list_spinlock);
+	while(1) {
+		spin_lock(&current_list_spinlock);
+		spin_lock(&waiting_list_spinlock);
+		if(canLock(new_lock)) {
+			deletefromList(waiting_lock_list,new_lock);
+			spin_unlock(&waiting_list_spinlock);
+			list_add(&new_lock,&current_lock_list);
+			spin_unlock(&current_list_spinlock);
+		}else {
+			spin_unlock(&current_list_spinlock);
+			spin_unlock(&waiting_list_spinlock);
+			set_current_state(TASK_INTERRUPTIBLE);
+			schedule();
+		}
+	}
 	return 0;
 }
 
