@@ -5,6 +5,7 @@
 #include<linux/rotation.h>
 #include<linux/spinlock.h>
 #include<linux/spinlock_types.h>
+#include<linux/readwritelock.h>
 
 enum LockType {
 	kInvalid = 0,
@@ -123,8 +124,9 @@ int lockProcess(int degree, int range, int type) {
 	return 0;
 }
 
-void wakeUp(void)
+int wakeUp(void)
 {
+	int count = 0;
         spin_lock(&current_list_spinlock);
         spin_lock(&waiting_list_spinlock);
         struct list_head *head;
@@ -132,10 +134,12 @@ void wakeUp(void)
                 struct lock_struct *lock = list_entry(head,struct lock_struct,list);
                 if(canLock(lock)) {
                         wake_up_process(pid_task(find_vpid(*lock->pid),PIDTYPE_PID));
-                }
+                	count += 1;
+		}
         }
         spin_unlock(&current_list_spinlock);
         spin_unlock(&waiting_list_spinlock);
+	return count;
 }
 
 
