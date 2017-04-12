@@ -128,8 +128,7 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 		}
 	}
 	spin_unlock(&current_list_spinlock);
-
-	// 다른 프로세스들 깨워주는 함수 콜
+	wakeUp();
 }
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
@@ -152,9 +151,17 @@ asmlinkage int sys_rotunlock_write(int degree, int range) {
 	return deleteProcess(degree, range, kWrite);
 }
 
-void wakeup(void)
+void wakeUp(void)
 {
-	
-
-
+	spin_lock(&current_list_spinlock);
+	spin_lock(&waiting_list_spinlock);
+	struct list_head *head;
+	list_for_each(head,&waiting_list_spinlock) {
+		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
+		if(canLock(lock)) {
+			wake_up_process(pid_task(lock->pid));
+		}
+	}
+	spin_unlock(&current_list_spinlock);
+	spin_unlcok(&waiting_list_spinlock);
 }
