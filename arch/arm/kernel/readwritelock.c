@@ -20,11 +20,6 @@ struct lock_struct {
 	struct list_head list,templist;
 };
 
-static LIST_HEAD(current_lock_list);
-static DEFINE_SPINLOCK(current_list_spinlock);
-static LIST_HEAD(waiting_lock_list);
-static DEFINE_SPINLOCK(waiting_list_spinlock);
-
 
 
 bool isInRange(int x, int degree, int range) {
@@ -53,7 +48,7 @@ bool isCrossed(struct lock_struct *a, struct lock_struct *b) {
 	return isInRange(a->degree - a->range, b->degree, b->range) || isInRange(a->degree + a->range, b->degree, b->range);
 }
 
-bool canLock(struct lock_struct *info) {
+bool canLock(struct lock_struct *info, struct list_head *temp_lock_list) {
 	printk(KERN_DEBUG "trying lock : %d %d %d",info->degree - info->range,info->degree + info->range,info->type);
 	
 	if(false == isInRange(get_rotation(),info->degree, info->range)) {
