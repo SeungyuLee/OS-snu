@@ -4,7 +4,6 @@
 #include <linux/spinlock.h>
 
 atomic_t rotation = ATOMIC_INIT(0);
-DEFINE_SPINLOCK(spinlock);
 
 void set_rotation(int degree)
 {
@@ -16,23 +15,33 @@ int get_rotation(void)
 	return atomic_read(&rotation);
 }
 
+
+// DEFINE_SPINLOCK(spinlock);
 void exit_rotlock(struct task_struct *task)
 {
-	spin_lock(&spinlock);
+	// spin_lock(&spinlock);
 	
-	list_for_each(lock in acquired_lock_list){
+	struct list_head *a;
+	struct lock_struct *alock; 
+	
+	list_for_each(a, acquired_lock_list){
+		alock = list_entry(a, struct lock_struct, list);
+		if(alock->pid == task->pid){
+			list_del(alock);
+			kfree(alock);
+		}
+	}
+
+	struct list_head *w;
+	struct lock_struct *wlock;
+
+	list_for_each(w, waiting_lock_list){
+		wlock = list_entry(w, struct lock_struct, list);
 		if(lock->pid == task->pid){
 			list_del(lock);
 			kfree(lock);
 		}
 	}
 
-	list_for_each(lock in waiting_lock_list){
-		if(lock->pid == task->pid){
-			list_del(lock);
-			kfree(lock);
-		}
-	}
-
-	spin_unlock(&spinlock);
+	// spin_unlock(&spinlock);
 }
