@@ -23,4 +23,4 @@ asmlinkage int sys_rotlock_write(int degree, int range);
 asmlinkage int sys_rotunlcok_read(int degree, int range);
 asmlinkage int sys_rotunlock_write(int degree, int range);
 
-void wakeup(void);
+void wakeUp(void);
