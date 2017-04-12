@@ -53,7 +53,7 @@ bool isCrossed(struct lock_struct *a, struct lock_struct *b) {
 	return isInRange(a->degree - a->range, b->degree, b->range) || isInRange(a->degree + a->range, b->degree, b->range);
 }
 
-bool canLock(struct lock_struct *info, struct list_head *temp_lock_list = NULL) {
+bool canLock(struct lock_struct *info) {
 	printk(KERN_DEBUG "trying lock : %d %d %d",info->degree - info->range,info->degree + info->range,info->type);
 	
 	if(false == isInRange(get_rotation(),info->degree, info->range)) {
@@ -119,7 +119,7 @@ int lockProcess(int degree, int range, int type) {
 	while(1) {
 		spin_lock(&current_list_spinlock);
 		spin_lock(&waiting_list_spinlock);
-		if(canLock(new_lock)) {
+		if(canLock(new_lock,NULL)) {
 			list_del(&new_lock->list);
 			spin_unlock(&waiting_list_spinlock);
 			list_add(&new_lock->list,&current_lock_list);
@@ -144,7 +144,7 @@ int wakeUp(void)
 	struct list_head *head;
     list_for_each(head,&waiting_lock_list) {
         struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-        if(canLock(lock)) {
+        if(canLock(lock,temp_lock_list)) {
 			INIT_LIST_HEAD(&lock->templist);
 			list_add(&lock->templist,&temp_lock_list);
             wake_up_process(pid_task(find_vpid(*lock->pid),PIDTYPE_PID));
