@@ -3,6 +3,7 @@
 #include<asm/uaccess.h>
 #include<linux/slab.h>
 #include<linux/rotation.h>
+#include<spinlock.h>
 
 enum LockType {
 	kInvalid = 0,
