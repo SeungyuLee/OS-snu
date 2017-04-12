@@ -17,7 +17,7 @@ struct lock_struct {
 	int degree,range;
 	int type;
 	pid_t* pid;
-	struct list_head list;
+	struct list_head list,templist;
 };
 
 static LIST_HEAD(current_lock_list);
@@ -53,7 +53,7 @@ bool isCrossed(struct lock_struct *a, struct lock_struct *b) {
 	return isInRange(a->degree - a->range, b->degree, b->range) || isInRange(a->degree + a->range, b->degree, b->range);
 }
 
-bool canLock(struct lock_struct *info) {
+bool canLock(struct lock_struct *info, struct list_head *temp_lock_list = NULL) {
 	printk(KERN_DEBUG "trying lock : %d %d %d",info->degree - info->range,info->degree + info->range,info->type);
 	
 	if(false == isInRange(get_rotation(),info->degree, info->range)) {
@@ -67,6 +67,17 @@ bool canLock(struct lock_struct *info) {
 		if ( isCrossed(info,lock) ) { // 겹치는 lock이 있다
 			if (info->type == kWrite || lock->type == kWrite) { // 둘다 read lock이 아닐경우
 				return false;
+			}
+		}
+	}
+	if(NULL != temp_lock_list) {
+		list_for_each(head,&temp_lock_list) {
+			struct lock_struct *lock = list_entry(head,struct lock_struct,templist);
+			printk(KERN_DEBUG "current lock : %d %d %d",lock->degree - lock->range, lock->degree + lock->range,lock->type);
+			if ( isCrossed(info,lock) ) { // 겹치는 lock이 있다
+				if (info->type == kWrite || lock->type == kWrite) { // 둘다 read lock이 아닐경우
+					return false;
+				}
 			}
 		}
 	}
@@ -127,18 +138,24 @@ int lockProcess(int degree, int range, int type) {
 int wakeUp(void)
 {
 	int count = 0;
-        spin_lock(&current_list_spinlock);
-        spin_lock(&waiting_list_spinlock);
-        struct list_head *head;
-        list_for_each(head,&waiting_lock_list) {
-                struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-                if(canLock(lock)) {
-                        wake_up_process(pid_task(find_vpid(*lock->pid),PIDTYPE_PID));
-                	count += 1;
+	LIST_HEAD(temp_lock_list);
+    spin_lock(&current_list_spinlock);
+    spin_lock(&waiting_list_spinlock);
+	struct list_head *head;
+    list_for_each(head,&waiting_lock_list) {
+        struct lock_struct *lock = list_entry(head,struct lock_struct,list);
+        if(canLock(lock)) {
+			INIT_LIST_HEAD(&lock->templist);
+			list_add(&lock->templist,&temp_lock_list);
+            wake_up_process(pid_task(find_vpid(*lock->pid),PIDTYPE_PID));
+            count += 1;
 		}
-        }
-        spin_unlock(&current_list_spinlock);
-        spin_unlock(&waiting_list_spinlock);
+    }
+    spin_unlock(&current_list_spinlock);
+    spin_unlock(&waiting_list_spinlock);
+	list_for_each(head,&temp_lock_list) {
+		list_del(head);
+	}
 	return count;
 }
 
