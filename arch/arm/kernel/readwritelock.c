@@ -44,6 +44,7 @@ bool isInRange(int x, int degree, int range) {
 			return true;
 		}
 	}
+	return false;
 }
 
 
@@ -123,19 +124,22 @@ int lockProcess(int degree, int range, int type) {
 	return 0;
 }
 
-void wakeUp(void)
+int wakeUp(void)
 {
+	int count = 0;
         spin_lock(&current_list_spinlock);
         spin_lock(&waiting_list_spinlock);
         struct list_head *head;
-        list_for_each(head,&waiting_list_spinlock) {
+        list_for_each(head,&waiting_lock_list) {
                 struct lock_struct *lock = list_entry(head,struct lock_struct,list);
                 if(canLock(lock)) {
-                        wake_up_process(pid_task(lock->pid));
-                }
+                        wake_up_process(pid_task(find_vpid(*lock->pid),PIDTYPE_PID));
+                	count += 1;
+		}
         }
         spin_unlock(&current_list_spinlock);
         spin_unlock(&waiting_list_spinlock);
+	return count;
 }
 
 
@@ -151,6 +155,7 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 	}
 	spin_unlock(&current_list_spinlock);
 	wakeUp();
+	return 0;
 }
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
