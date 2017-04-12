@@ -123,19 +123,22 @@ int lockProcess(int degree, int range, int type) {
 	return 0;
 }
 
-void wakeUp(void)
+int wakeUp(void)
 {
-        spin_lock(&current_list_spinlock);
-        spin_lock(&waiting_list_spinlock);
-        struct list_head *head;
-        list_for_each(head,&waiting_list_spinlock) {
-                struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-                if(canLock(lock)) {
-                        wake_up_process(pid_task(lock->pid));
-                }
-        }
-        spin_unlock(&current_list_spinlock);
-        spin_unlock(&waiting_list_spinlock);
+	int count = 0;
+	spin_lock(&current_list_spinlock);
+    spin_lock(&waiting_list_spinlock);
+	struct list_head *head;
+    list_for_each(head,&waiting_list_spinlock) {
+        struct lock_struct *lock = list_entry(head,struct lock_struct,list);
+	    if(canLock(lock)) {
+			wake_up_process(pid_task(lock->pid));
+			count += 1;
+		}
+    }
+    spin_unlock(&current_list_spinlock);
+    spin_unlock(&waiting_list_spinlock);
+	return count;
 }
 
 
