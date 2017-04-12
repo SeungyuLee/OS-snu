@@ -5,6 +5,7 @@
 #include<linux/rotation.h>
 #include<linux/spinlock.h>
 #include<linux/spinlock_types.h>
+#include<linux/readwritelock.h>
 
 enum LockType {
 	kInvalid = 0,
