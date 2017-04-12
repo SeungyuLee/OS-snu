@@ -151,3 +151,10 @@ asmlinkage int sys_rotunlock_write(int degree, int range) {
 	if(degree >= 360 || degree < 0) return -EINVAL;
 	return deleteProcess(degree, range, kWrite);
 }
+
+void wakeup(void)
+{
+	
+
+
+}
