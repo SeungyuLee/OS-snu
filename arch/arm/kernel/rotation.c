@@ -24,29 +24,34 @@ void exit_rotlock(struct task_struct *task)
 	// spin_lock(&spinlock);
 	
 	struct list_head *a;
-	struct lock_struct *alock; 
+	struct lock_struct *alock;
+	struct lock_struct *n;
 	
-	list_for_each(a, &current_lock_list){
+	spin_lock(&current_list_spinlock);
+	list_for_each_safe(a, n, &current_lock_list){
 		alock = list_entry(a, struct lock_struct, list);
-		if(alock->pid == &task->pid){
+		if(alock->pid == task->pid){
 			list_del(&alock->list);
 			list_del(&alock->templist);
-			kfree(&alock);
+			kfree(alock);
 		}
 	}
+	spin_unlock(&current_list_spinlock);
 
 	struct list_head *w;
 	struct lock_struct *wlock;
+	struct lock_struct *m;
 
-	list_for_each(w, &waiting_lock_list){
+	spin_lock(&waiting_list_spinlock);
+	list_for_each_safe(w, m, &waiting_lock_list){
 		wlock = list_entry(w, struct lock_struct, list);
-		if(wlock->pid == &task->pid){
+		if(wlock->pid == task->pid){
 			list_del(&wlock->list);
 			list_del(&wlock->templist);
-			kfree(&wlock);
+			kfree(wlock);
 		}
 	}
-
+	spin_unlock(&waiting_list_spinlock);
 	// spin_unlock(&spinlock);
 }
 
