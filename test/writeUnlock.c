@@ -1,7 +1,7 @@
-#include <sys/syscalls.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #include <unistd.h>
-#define SYSCALL_ROTUNLOCK_WRITE 384
+#define SYSCALL_ROTUNLOCK_WRITE 385
 
 int main(int argc, char* argv[])
 {

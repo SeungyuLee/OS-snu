@@ -7,20 +7,14 @@
 #include<linux/spinlock_types.h>
 #include<linux/readwritelock.h>
 
+static DEFINE_SPINLOCK(current_list_spinlock);
+static DEFINE_SPINLOCK(waiting_list_spinlock);
+
 enum LockType {
 	kInvalid = 0,
 	kRead = 1,
 	kWrite = 2
 };
-
-struct lock_struct {
-	int degree,range;
-	int type;
-	pid_t* pid;
-	struct list_head list,templist;
-};
-
-
 
 bool isInRange(int x, int degree, int range) {
 	if (range >= 180) {
@@ -66,7 +60,7 @@ bool canLock(struct lock_struct *info, struct list_head *temp_lock_list) {
 		}
 	}
 	if(NULL != temp_lock_list) {
-		list_for_each(head,&temp_lock_list) {
+		list_for_each(head,temp_lock_list) {
 			struct lock_struct *lock = list_entry(head,struct lock_struct,templist);
 			printk(KERN_DEBUG "current lock : %d %d %d",lock->degree - lock->range, lock->degree + lock->range,lock->type);
 			if ( isCrossed(info,lock) ) { // 겹치는 lock이 있다
@@ -139,7 +133,7 @@ int wakeUp(void)
 	struct list_head *head;
     list_for_each(head,&waiting_lock_list) {
         struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-        if(canLock(lock,temp_lock_list)) {
+        if(canLock(lock,&temp_lock_list)) {
 			INIT_LIST_HEAD(&lock->templist);
 			list_add(&lock->templist,&temp_lock_list);
             wake_up_process(pid_task(find_vpid(*lock->pid),PIDTYPE_PID));

@@ -1,4 +1,4 @@
-#include <sys/syscalls.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #include <unistd.h>
 #define SYSCALL_ROTLOCK_READ 381
