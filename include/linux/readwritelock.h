@@ -11,13 +11,15 @@ enum LockType;
 struct lock_struct {
 	int degree,range;
 	int type;
-	pid_t* pid;
+	pid_t pid;
 	struct list_head list,templist;
 };
 
 
 static LIST_HEAD(current_lock_list);
 static LIST_HEAD(waiting_lock_list);
+static DEFINE_SPINLOCK(current_list_spinlock);
+static DEFINE_SPINLOCK(waiting_list_spinlock);
 
 bool isInRange(int x, int degree, int range);
 bool isCrossed(struct lock_struct *a, struct lock_struct *b);
