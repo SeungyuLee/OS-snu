@@ -7,6 +7,9 @@
 #include<linux/spinlock_types.h>
 #include<linux/readwritelock.h>
 
+static DEFINE_SPINLOCK(current_list_spinlock);
+static DEFINE_SPINLOCK(waiting_list_spinlock);
+
 enum LockType {
 	kInvalid = 0,
 	kRead = 1,

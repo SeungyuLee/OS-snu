@@ -4,6 +4,7 @@
 #include <linux/sched.h>
 #include <linux/list.h>
 #include <linux/spinlock.h>
+#include <linux/spinlock_types.h>
 
 enum LockType;
 
@@ -16,9 +17,7 @@ struct lock_struct {
 
 
 static LIST_HEAD(current_lock_list);
-static spinlock_t current_list_spinlock;
 static LIST_HEAD(waiting_lock_list);
-static spinlock_t waiting_list_spinlock;
 
 bool isInRange(int x, int degree, int range);
 bool isCrossed(struct lock_struct *a, struct lock_struct *b);

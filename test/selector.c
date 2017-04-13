@@ -4,7 +4,7 @@
 #include <sys/syscall.h>
 
 #define SYSCALL_ROTLOCK_WRITE 382
-#define SYSCALL_ROTUNLOCK_WRITE 384
+#define SYSCALL_ROTUNLOCK_WRITE 385
 
 static volatile int keepRunning = 1;
 
