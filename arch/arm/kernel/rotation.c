@@ -18,11 +18,8 @@ int get_rotation(void)
 }
 
 
-// DEFINE_SPINLOCK(spinlock);
 void exit_rotlock(struct task_struct *task)
 {
-	// spin_lock(&spinlock);
-	
 	struct list_head *a;
 	struct lock_struct *alock;
 	struct lock_struct *n;
@@ -38,6 +35,7 @@ void exit_rotlock(struct task_struct *task)
 	}
 	spin_unlock(&current_list_spinlock);
 
+
 	struct list_head *w;
 	struct lock_struct *wlock;
 	struct lock_struct *m;
@@ -52,6 +50,5 @@ void exit_rotlock(struct task_struct *task)
 		}
 	}
 	spin_unlock(&waiting_list_spinlock);
-	// spin_unlock(&spinlock);
 }
 

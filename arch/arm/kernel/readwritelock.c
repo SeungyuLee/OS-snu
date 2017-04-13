@@ -99,12 +99,16 @@ int lockProcess(int degree, int range, int type) {
 	new_lock->pid = current->pid;
 	INIT_LIST_HEAD(&new_lock->list);
 	spin_lock(&waiting_list_spinlock);
+	printk(KERN_EMERG "lockProcess waiting_list_spinlock success before while");
 	list_add(&new_lock->list,&waiting_lock_list);
 	spin_unlock(&waiting_list_spinlock);
+	printk(KERN_EMERG "lockProcess waiting_list_spinlock unlock success before while");
 	printk(KERN_EMERG "lockProcess lock: %d %d %d %d", degree, range, type, new_lock->pid);
 	while(1) {
 		spin_lock(&current_list_spinlock);
+		printk(KERN_EMERG "lockProcess current list spinlock success");
 		spin_lock(&waiting_list_spinlock);
+		printk(KERN_EMERG "lockProcess waiting list spinlock success");
 		if(canLock(new_lock,NULL)) {
 			printk(KERN_EMERG "lockProcess success: %d %d %d %d", degree, range, type, new_lock->pid);
 			list_del(&new_lock->list);
@@ -119,7 +123,9 @@ int lockProcess(int degree, int range, int type) {
 		}else {
 			printk(KERN_EMERG "lockProcess failed: %d %d %d %d", degree, range, type, new_lock->pid);
 			spin_unlock(&current_list_spinlock);
+			printk(KERN_EMERG "lockProcess current list spinlock unlock success in else statement");
 			spin_unlock(&waiting_list_spinlock);
+			printk(KERN_EMERG "lockProcess waiting list spinlock unlock success in else statement");
 			set_current_state(TASK_INTERRUPTIBLE);
 			schedule();
 		}
@@ -132,7 +138,9 @@ int wakeUp(void)
 	int count = 0;
 	LIST_HEAD(temp_lock_list);
     spin_lock(&current_list_spinlock);
+	printk(KERN_EMERG "wakeUp current_list_spinlock success");
     spin_lock(&waiting_list_spinlock);
+	printk(KERN_EMERG "wakeUp waiting_list_spinlock success");
 	struct list_head *head;
     list_for_each(head, &waiting_lock_list) {
         struct lock_struct *lock = list_entry(head,struct lock_struct,list);
@@ -144,7 +152,10 @@ int wakeUp(void)
 		}
     }
     spin_unlock(&current_list_spinlock);
+	printk(KERN_EMERG "wakeUp current_list_spinlock unlock success");
     spin_unlock(&waiting_list_spinlock);
+	printk(KERN_EMERG "wakeUp waiting_list_spinlock unlock success");
+	
 	struct list_head *n;
 	list_for_each_safe(head, n, &temp_lock_list) {
 		list_del(head);
@@ -155,6 +166,7 @@ int wakeUp(void)
 
 int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무조건 락이 잡혀있다는 가정하에 작업
 	spin_lock(&current_list_spinlock);
+	printk(KERN_EMERG "deleteProcess current_list_spinlock success");
 	struct list_head *head;
 	struct list_head *n;
 	printk(KERN_EMERG "deleteProcess before list traversal");
@@ -162,16 +174,13 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 		struct lock_struct *lock = list_entry(head,struct lock_struct, list);
 		if(lock->degree == degree && lock->range == range && lock->type == type && lock->pid == current->pid ) {
 			list_del(&lock->list);
-			printk(KERN_EMERG "list del success");
 			kfree(lock);
-			printk(KERN_EMERG "kfree(&lock) success");
 		}
 	}
 	printk(KERN_EMERG "deleteProcess after list traversal");
 	spin_unlock(&current_list_spinlock);
-	printk(KERN_EMERG "before wakeup");
+	printk(KERN_EMERG "deleteProcess current_list_spinlock unlock success");
 	wakeUp();
-	printk(KERN_EMERG "after wakeup");
 	return 0;
 }
 
