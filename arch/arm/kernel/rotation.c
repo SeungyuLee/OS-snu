@@ -24,7 +24,8 @@ void exit_rotlock(struct task_struct *task)
 	struct list_head *a;
 	struct lock_struct *alock;
 	struct lock_struct *n;
-	
+	int count = 0;
+
 	spin_lock(&current_list_spinlock);
 	list_for_each_safe(a, n, &current_lock_list){
 		alock = list_entry(a, struct lock_struct, list);
@@ -32,6 +33,7 @@ void exit_rotlock(struct task_struct *task)
 			list_del(&alock->list);
 			list_del(&alock->templist);
 			kfree(alock);
+			count ++;
 		}
 	}
 	spin_unlock(&current_list_spinlock);
@@ -48,8 +50,12 @@ void exit_rotlock(struct task_struct *task)
 			list_del(&wlock->list);
 			list_del(&wlock->templist);
 			kfree(wlock);
+			count ++;
 		}
 	}
 	spin_unlock(&waiting_list_spinlock);
+	if ( count > 0 ) {
+		wakeUp();
+	}
 }
 
