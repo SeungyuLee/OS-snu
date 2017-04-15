@@ -1,4 +1,4 @@
-Project 1
+Project 2
 ===================
 
 ## Summary 
@@ -7,6 +7,7 @@ The goal of this assignment is implementing a new kernel syncronization primitiv
 
 
 ## Impementation
+
 
 ### 1. set_rotation System Call
 
@@ -26,9 +27,7 @@ set_rotation() function is implemented in rotation.c . It is called In set_rotat
 
 
 
-### 2. Reader-Writer Lock
-
-#### Approach
+### 2. Approach
 
 First, The policies of determining whether lock is possible are as follows.
 
@@ -54,7 +53,7 @@ The waking process loops again through the previous lock request system call fun
 If multiple process try to access **curren_lock_list** and **wait_lock_list** at the same time, _synchronization_ problems may occur. Therefore, we lock the process each time process access each list using **spinlock**. In order to keep the concept of locking the data not code, we made separate spinlock for **current_lock_list** and spinlock for **wait_lock_list** respectively.
 
 
-#### Implementation
+### 3. Implementation of `readwritelock.c`
 
 Lock/Unlock Systemcall for Reader/Writer is implemented in  `arch/arm/kernel/readwritelock.c`. 
 
@@ -97,13 +96,15 @@ struct lock_struct {
 }
 ```
 
-`struct list_head list`of `struct lock_struct` is for `current_lock_list` that contains currently grabbed locks and `waiting_lock_list` that contains pending locks. Those list is declared n readwritelock.h like the following: 
+`struct list_head list`of `struct lock_struct` is for `current_lock_list` that contains currently grabbed locks and `waiting_lock_list` that contains pending locks. Those list is declared like the following: 
 
 ```
+...
 static LIST_HEAD(current_lock_list);
 static LIST_HEAD(waiting_lock_list);
 static DEFINE_SPINLOCK(current_list_spinlock);
 static DEFINE_SPINLOCK(waiting_list_spinlock);
+..
 ```
  
 Spinlock is also declared to hold the lock for each list. These spinlocks are used in `lockProcess()` to prevent other processes from accessing lists each time locks are insertedand removed from the lists.
@@ -150,11 +151,40 @@ if(canLock(lock,&temp_lock_list)) {
 
 ### 3. Test Program
 
-* selector.c
+* Terminating routine 
 
-* trial.c
+To terminate selector/trial program using `Ctrl+c`, signal() in signal.h is used.
+
+```
+...
+static volatile int keepRunning = 1;
+
+void intHandler(int dummy) {
+	keepRunning = 0;
+}
+...
+
+int main(){
+...
+signal(SIGINT, intHandler);
+...
+
+```
+
+
+* Demo video of test program
+
+
+[![Video Label](http://img.youtube.com/vi/TP-YFTXuMxk/0.jpg)](https://youtu.be/TP-YFTXuMxk?t=0s) Video Label
+
+
+
 
 ## Lessons
+
+1. we learned how to use synchronization primitives in practice such as spinlocks, atomic_t in linux
+2. now we know how ctrl + c works in depth since it caused some trouble while debugging.
+3. system call number 384 has a problem
 
 ## Team Members
 
