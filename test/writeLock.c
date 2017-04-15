@@ -11,6 +11,7 @@ int main(int argc, char* argv[])
 	int arg2 = atoi(argv[2]);
 	syscall(SYSCALL_ROTLOCK_WRITE, arg1, arg2);
 	printf("rotlock_write from %d to %d\n", arg1-arg2, arg1+arg2);
+	for(int i = 0; i < 100000000; i++){}
 	scanf("%d", &n);
 	syscall(SYSCALL_ROTUNLOCK_WRITE, arg1, arg2);
 	printf("rotunlock_write from %d to %d\n", arg1- arg2, arg1+arg2);

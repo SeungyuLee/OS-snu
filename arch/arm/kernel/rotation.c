@@ -20,6 +20,7 @@ int get_rotation(void)
 
 void exit_rotlock(struct task_struct *task)
 {
+	
 	struct list_head *a;
 	struct lock_struct *alock;
 	struct lock_struct *n;
