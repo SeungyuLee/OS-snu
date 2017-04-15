@@ -22,4 +22,3 @@ int get_rotation(void)
 }
 
 
-
