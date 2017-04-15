@@ -1071,8 +1071,6 @@ struct task_struct {
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
 
-	bool isReadWriteLock = false; /*flag for identify RWL */
-
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;
@@ -1458,6 +1456,7 @@ struct task_struct {
 	unsigned int	sequential_io;
 	unsigned int	sequential_io_avg;
 #endif
+	bool isReadWriteLock; /*flag for identify RWL */
 };
 
 /* Future-safe accessor for struct task_struct's cpus_allowed. */
