@@ -712,7 +712,7 @@ static void check_stack_usage(void)
 static inline void check_stack_usage(void) {}
 #endif
 
-#include <linux/rotation.h>
+#include <linux/readwritelock.h>
 
 void do_exit(long code)
 {

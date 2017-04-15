@@ -7,6 +7,11 @@
 #include<linux/spinlock_types.h>
 #include<linux/readwritelock.h>
 
+static LIST_HEAD(current_lock_list);
+static LIST_HEAD(waiting_lock_list);
+static DEFINE_SPINLOCK(current_list_spinlock);
+static DEFINE_SPINLOCK(waiting_list_spinlock);
+
 enum LockType {
 	kInvalid = 0,
 	kRead = 1,
@@ -187,11 +192,13 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
 	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
 	return lockProcess(degree,range,kRead);
 }
 
 asmlinkage int sys_rotlock_write(int degree, int range) {
 	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
 	return lockProcess(degree,range,kWrite);
 }
 
@@ -209,3 +216,46 @@ asmlinkage int sys_rotunlock_write(int degree, int range) {
 	return deleted;
 }
 
+
+void exit_rotlock(struct task_struct *task)
+{
+	if(task->isReadWriteLock == false) return;
+	printk(KERN_EMERG "is ReadWriteLock");
+	struct list_head *a;
+	struct lock_struct *alock;
+	struct list_head *n;
+	int count = 0;	
+
+	spin_lock(&current_list_spinlock);
+	list_for_each_safe(a, n, &current_lock_list){
+		alock = list_entry(a, struct lock_struct, list);
+		printk(KERN_EMERG "alock: %d %d %d , task pid: %d", alock->degree, alock->range, alock->pid, task->pid);
+		if(alock->pid == task->pid){
+			list_del(&alock->list);
+			list_del(&alock->templist);
+			kfree(alock);
+			count ++;
+		}
+	}
+	spin_unlock(&current_list_spinlock);
+
+
+	struct list_head *w;
+	struct lock_struct *wlock;
+	struct list_head *m;
+
+	spin_lock(&waiting_list_spinlock);
+	list_for_each_safe(w, m, &waiting_lock_list){
+		wlock = list_entry(w, struct lock_struct, list);
+		if(wlock->pid == task->pid){
+			list_del(&wlock->list);
+			list_del(&wlock->templist);
+			kfree(wlock);
+			count ++;
+		}
+	}
+	spin_unlock(&waiting_list_spinlock);
+	if(count > 0) {
+		wakeUp();
+	}
+}
