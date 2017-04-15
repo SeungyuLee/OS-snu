@@ -20,7 +20,8 @@ int get_rotation(void)
 
 void exit_rotlock(struct task_struct *task)
 {
-	if(task->isReadWirteLock == false) return;	
+	if(task->isReadWirteLock == false) return;
+	prink(KERN_EMERG "is ReadWirteLock");
 	struct list_head *a;
 	struct lock_struct *alock;
 	struct lock_struct *n;
