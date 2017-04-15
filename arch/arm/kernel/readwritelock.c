@@ -187,11 +187,13 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
 	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
 	return lockProcess(degree,range,kRead);
 }
 
 asmlinkage int sys_rotlock_write(int degree, int range) {
 	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
 	return lockProcess(degree,range,kWrite);
 }
 
