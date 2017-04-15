@@ -10,5 +10,4 @@ void set_rotation(int degree);
 
 int get_rotation(void);
 
-void exit_rotlock(struct task_struct *task);
 #endif

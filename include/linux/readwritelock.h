@@ -16,11 +16,6 @@ struct lock_struct {
 };
 
 
-static LIST_HEAD(current_lock_list);
-static LIST_HEAD(waiting_lock_list);
-static DEFINE_SPINLOCK(current_list_spinlock);
-static DEFINE_SPINLOCK(waiting_list_spinlock);
-
 bool isInRange(int x, int degree, int range);
 bool isCrossed(struct lock_struct *a, struct lock_struct *b);
 
@@ -34,4 +29,5 @@ asmlinkage int sys_rotlock_write(int degree, int range);
 asmlinkage int sys_rotunlcok_read(int degree, int range);
 asmlinkage int sys_rotunlock_write(int degree, int range);
 
+void exit_rotlock(struct task_struct *task);
 #endif
