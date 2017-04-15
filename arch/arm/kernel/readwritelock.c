@@ -3,6 +3,14 @@
 #include<asm/uaccess.h>
 #include<linux/slab.h>
 #include<linux/rotation.h>
+#include<linux/spinlock.h>
+#include<linux/spinlock_types.h>
+#include<linux/readwritelock.h>
+
+static LIST_HEAD(current_lock_list);
+static LIST_HEAD(waiting_lock_list);
+static DEFINE_SPINLOCK(current_list_spinlock);
+static DEFINE_SPINLOCK(waiting_list_spinlock);
 
 enum LockType {
 	kInvalid = 0,
@@ -10,44 +18,33 @@ enum LockType {
 	kWrite = 2
 };
 
-struct lock_struct {
-	int* degree,range;
-	enum lockType *type;
-	atomic_t* count;
-	pid_t* pid;
-	struct list_head list;
-};
-
-static LIST_HEAD(current_lock_list);
-static spinlock_t current_list_spinlock = SPIN_LOCK_UNLOCKED;
-static LIST_HEAD(waiting_lock_list);
-static spinlock_t waiting_list_spinlock = SPIN_LOCK_UNLOCKED;
-
-bool isInRange(int current, int degree, int range) {
+bool isInRange(int x, int degree, int range) {
 	if (range >= 180) {
 		return true;
 	}
-	current = current % 360;
+	x = x % 360;
 	int start = (degree - range) % 360;
 	int end = (degree + range) % 360;
 	if (start < end) {
-		if ( current >= start || current <= end ) {
+		if ( x >= start && x <= end ) {
 			return true;
 		}
 	}
 	else {
-		if ( current <= start || current >= end ) {
+		if ( x >= start || x <= end ) {
 			return true;
 		}
 	}
+	return false;
 }
+
+
 
 bool isCrossed(struct lock_struct *a, struct lock_struct *b) {
 	return isInRange(a->degree - a->range, b->degree, b->range) || isInRange(a->degree + a->range, b->degree, b->range);
 }
 
-bool canLock(struct lock_struct *info) {
-	printk(KERN_DEBUG "trying lock : %d %d %d",info->degree - info->range,info->degree + info->range,info->type);
+bool canLock(struct lock_struct *info, struct list_head *temp_lock_list) {
 	
 	if(false == isInRange(get_rotation(),info->degree, info->range)) {
 		return false;
@@ -56,20 +53,28 @@ bool canLock(struct lock_struct *info) {
 	struct list_head *head;
 	list_for_each(head,&current_lock_list) {
 		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
-		printk(KERN_DEBUG "current lock : %d %d %d",lock->degree - lock->range, lock->degree + lock->range,lock->type);
 		if ( isCrossed(info,lock) ) { // 겹치는 lock이 있다
 			if (info->type == kWrite || lock->type == kWrite) { // 둘다 read lock이 아닐경우
 				return false;
 			}
 		}
 	}
+	if(NULL != temp_lock_list) {
+		list_for_each(head,temp_lock_list) {
+			struct lock_struct *lock = list_entry(head,struct lock_struct,templist);
+			if ( isCrossed(info,lock) ) { // 겹치는 lock이 있다
+				if (info->type == kWrite || lock->type == kWrite) { // 둘다 read lock이 아닐경우
+					return false;
+				}
+			}
+		}
+	}
 	if (info->type == kRead) {
 		list_for_each(head, &waiting_lock_list) {
 			struct lock_struct *lock = list_entry(head, struct lock_struct, list);
-			printk(KERN_DEBUG "wating write lock : %d %d %d",lock->degree - lock->range, lock->degree + lock->range, lock->type);
 			if(lock->type == kWrite) {
 				if ( isCrossed(info,lock) ) { // 겹치는 write lock이 있다
-					if ( isInRange(get_rotation(), lock->degree, lock -> range) ) { // 현재degree를 포함한다
+					if ( isInRange(get_rotation(), lock->degree, lock->range) ) { // 현재degree를 포함한다
 						struct list_head *head2;
 						list_for_each(head2,&current_lock_list) {
 							struct lock_struct *lock2 = list_entry(head2,struct lock_struct,list);
@@ -87,67 +92,170 @@ bool canLock(struct lock_struct *info) {
 	return true;
 }
 
-int lockProcess(int degree, int range, enum LockType type) {
+int lockProcess(int degree, int range, int type) {
 	struct lock_struct *new_lock;
 	new_lock = kmalloc(sizeof(*new_lock), GFP_KERNEL);
 	new_lock->degree = degree;
 	new_lock->range = range;
 	new_lock->type = type;
-	new_lock->pid = getpid();
+	new_lock->pid = current->pid;
 	INIT_LIST_HEAD(&new_lock->list);
 	spin_lock(&waiting_list_spinlock);
-	list_add(&new_lock,&waiting_lock_list);
+	printk(KERN_EMERG "lockProcess waiting_list_spinlock success before while");
+	list_add(&new_lock->list,&waiting_lock_list);
 	spin_unlock(&waiting_list_spinlock);
+	printk(KERN_EMERG "lockProcess waiting_list_spinlock unlock success before while");
+	printk(KERN_EMERG "lockProcess lock: %d %d %d %d", degree, range, type, new_lock->pid);
 	while(1) {
 		spin_lock(&current_list_spinlock);
+		printk(KERN_EMERG "lockProcess current list spinlock success");
 		spin_lock(&waiting_list_spinlock);
-		if(canLock(new_lock)) {
-			list_del(&newlock->list);
+		printk(KERN_EMERG "lockProcess waiting list spinlock success");
+		if(canLock(new_lock,NULL)) {
+			printk(KERN_EMERG "lockProcess success: %d %d %d %d", degree, range, type, new_lock->pid);
+			list_del(&new_lock->list);
+			printk(KERN_EMERG "list_del success");
 			spin_unlock(&waiting_list_spinlock);
-			list_add(&new_lock,&current_lock_list);
-			spin_unlock(&current_list_spinlock);
+			printk(KERN_EMERG "spin unlock waiting list success");
+			list_add(&new_lock->list,&current_lock_list);
+			printk(KERN_EMERG "list add success");
+			spin_unlock(&current_list_spinlock); // problem
+			printk(KERN_EMERG "spin unlock current list success");
 			break;
+			printk(KERN_EMERG "pass break");
 		}else {
-			spin_unlock(&current_list_spinlock);
+			printk(KERN_EMERG "lockProcess failed: %d %d %d %d", degree, range, type, new_lock->pid);
 			spin_unlock(&waiting_list_spinlock);
+			printk(KERN_EMERG "lockProcess current list spinlock unlock success in else statement");
+			spin_unlock(&current_list_spinlock);
+			printk(KERN_EMERG "lockProcess waiting list spinlock unlock success in else statement"); // problem
 			set_current_state(TASK_INTERRUPTIBLE);
+			printk(KERN_EMERG "TASK_INTERRUPTIBLE success");
 			schedule();
+			printk(KERN_EMERG "SCHEDULE() success");
 		}
 	}
+	printk(KERN_EMERG "lockProcess before return");
 	return 0;
 }
 
+int wakeUp(void)
+{
+	int count = 0;
+	LIST_HEAD(temp_lock_list);
+    // spin_lock(&current_list_spinlock);
+    spin_lock(&waiting_list_spinlock);
+	struct list_head *head;
+    list_for_each(head, &waiting_lock_list) {
+        struct lock_struct *lock = list_entry(head,struct lock_struct,list);
+		spin_lock(&current_list_spinlock);
+		if(canLock(lock,&temp_lock_list)) {
+			INIT_LIST_HEAD(&lock->templist);
+			list_add(&lock->templist,&temp_lock_list);
+            wake_up_process(pid_task(find_vpid(lock->pid),PIDTYPE_PID));
+            count += 1;
+		}
+		spin_unlock(&current_list_spinlock);
+    }
+    spin_unlock(&waiting_list_spinlock);
+    // spin_unlock(&current_list_spinlock);
+	
+	struct list_head *n;
+	list_for_each_safe(head, n, &temp_lock_list) {
+		list_del(head);
+	}
+	return count;
+}
+
+
 int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무조건 락이 잡혀있다는 가정하에 작업
 	spin_lock(&current_list_spinlock);
+	printk(KERN_EMERG "deleteProcess current_list_spinlock success");
 	struct list_head *head;
-	list_for_each(head, &current_lock_list) {
+	struct list_head *n;
+	int count = 0;
+	list_for_each_safe(head, n, &current_lock_list) {
 		struct lock_struct *lock = list_entry(head,struct lock_struct, list);
-		if(lock->degree == degree && lock->range == range && lock->type == type && lock->pid == getpid() ) {
+		if(lock->degree == degree && lock->range == range && lock->type == type && lock->pid == current->pid ) {
 			list_del(&lock->list);
-			kfree(&lock);
+			kfree(lock);
+			count++;
 		}
 	}
-	spin_unlock(&current_list_spinlock);
-
-	// 다른 프로세스들 깨워주는 함수 콜
+	printk(KERN_EMERG "deleteProcess before unlock");
+	spin_unlock(&current_list_spinlock); // problem
+	printk(KERN_EMERG "deleteProcess current_list_spinlock unlock success");
+	wakeUp();
+	printk(KERN_EMERG "deleteProcess before return with %d", count);
+	return count;
 }
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
+	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
 	return lockProcess(degree,range,kRead);
 }
 
 asmlinkage int sys_rotlock_write(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
+	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
 	return lockProcess(degree,range,kWrite);
 }
 
 asmlinkage int sys_rotunlock_read(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
-	return deleteProcess(degree, range, kRead);
+	if(range < 0) return -EINVAL;
+	int deleted = deleteProcess(degree, range, kRead);
+	if(deleted == 0) return -EINVAL; // error handling when deleted > 1 should be added
+	return deleted;
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
-	return deleteProcess(degree, range, kWrite);
+	if(range < 0) return -EINVAL;
+	int deleted = deleteProcess(degree, range, kWrite);
+	if(deleted == 0 ) return -EINVAL; // error handling when deleted > 1 should be added
+	return deleted;
+}
+
+
+void exit_rotlock(struct task_struct *task)
+{
+	if(task->isReadWriteLock == false) return;
+	printk(KERN_EMERG "is ReadWriteLock");
+	struct list_head *a;
+	struct lock_struct *alock;
+	struct list_head *n;
+	int count = 0;	
+
+	spin_lock(&current_list_spinlock);
+	list_for_each_safe(a, n, &current_lock_list){
+		alock = list_entry(a, struct lock_struct, list);
+		printk(KERN_EMERG "alock: %d %d %d , task pid: %d", alock->degree, alock->range, alock->pid, task->pid);
+		if(alock->pid == task->pid){
+			list_del(&alock->list);
+			list_del(&alock->templist);
+			kfree(alock);
+			count ++;
+		}
+	}
+	spin_unlock(&current_list_spinlock);
+
+
+	struct list_head *w;
+	struct lock_struct *wlock;
+	struct list_head *m;
+
+	spin_lock(&waiting_list_spinlock);
+	list_for_each_safe(w, m, &waiting_lock_list){
+		wlock = list_entry(w, struct lock_struct, list);
+		if(wlock->pid == task->pid){
+			list_del(&wlock->list);
+			list_del(&wlock->templist);
+			kfree(wlock);
+			count ++;
+		}
+	}
+	spin_unlock(&waiting_list_spinlock);
+	if(count > 0) {
+		wakeUp();
+	}
 }
