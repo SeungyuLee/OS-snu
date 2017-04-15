@@ -59,23 +59,29 @@ Lock/Unlock Systemcall for Reader/Writer is implemented in  `arch/arm/kernel/rea
 
 ```
 asmlinkage int sys_rotlock_read(int degree, int range) {
-        if(degree >= 360 || degree < 0) return -EINVAL;
-        return lockProcess(degree,range,kRead);
+	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
+	return lockProcess(degree,range,kRead);
 }
 
 asmlinkage int sys_rotlock_write(int degree, int range) {
-        if(degree >= 360 || degree < 0) return -EINVAL;
-        return lockProcess(degree,range,kWrite);
+	if(range < 0) return -EINVAL;
+	current->isReadWriteLock = true;
+	return lockProcess(degree,range,kWrite);
 }
 
 asmlinkage int sys_rotunlock_read(int degree, int range) {
-        if(degree >= 360 || degree < 0) return -EINVAL;
-        return deleteProcess(degree, range, kRead);
+	if(range < 0) return -EINVAL;
+	int deleted = deleteProcess(degree, range, kRead);
+	if(deleted == 0) return -EINVAL; // error handling when deleted > 1 should be added
+	return deleted;
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
-        if(degree >= 360 || degree < 0) return -EINVAL;
-        return deleteProcess(degree, range, kWrite);
+	if(range < 0) return -EINVAL;
+	int deleted = deleteProcess(degree, range, kWrite);
+	if(deleted == 0 ) return -EINVAL; // error handling when deleted > 1 should be added
+	return deleted;
 }
 ```
 
@@ -171,11 +177,30 @@ signal(SIGINT, intHandler);
 
 ```
 
+* How to compile and Excute
+
+- Compile
+```
+~/linux-3.10-artik$ arm-linux-gnueabi-gcc -I/include test/selector.c -o selector
+~/linux-3.10-artik$ arm-linux-gnueabi-gcc -I/include test/trial.c -o trial
+
+```
+- Push the test program
+```
+~/linux-3.10-artik$ push selector /root/selector
+~/linux-3.10-artik$ push trial /root/trial
+
+```
+Execute (via artik)
+```
+root:~> ./selector 7492 (example)
+root:~> ./trial 0 (example)
+```
 
 * Demo video of test program
 
 
-[![Video Label](http://img.youtube.com/vi/TP-YFTXuMxk/0.jpg)](https://youtu.be/TP-YFTXuMxk?t=0s) Video Label
+[![Video Label](http://img.youtube.com/vi/TP-YFTXuMxk/0.jpg)](https://youtu.be/TP-YFTXuMxk?t=0s)
 
 
 
