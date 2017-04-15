@@ -100,42 +100,30 @@ int lockProcess(int degree, int range, int type) {
 	new_lock->type = type;
 	new_lock->pid = current->pid;
 	INIT_LIST_HEAD(&new_lock->list);
+	INIT_LIST_HEAD(&new_lock->templist);
 	spin_lock(&waiting_list_spinlock);
-	printk(KERN_EMERG "lockProcess waiting_list_spinlock success before while");
 	list_add(&new_lock->list,&waiting_lock_list);
 	spin_unlock(&waiting_list_spinlock);
-	printk(KERN_EMERG "lockProcess waiting_list_spinlock unlock success before while");
 	printk(KERN_EMERG "lockProcess lock: %d %d %d %d", degree, range, type, new_lock->pid);
 	while(1) {
 		spin_lock(&current_list_spinlock);
-		printk(KERN_EMERG "lockProcess current list spinlock success");
 		spin_lock(&waiting_list_spinlock);
-		printk(KERN_EMERG "lockProcess waiting list spinlock success");
 		if(canLock(new_lock,NULL)) {
 			printk(KERN_EMERG "lockProcess success: %d %d %d %d", degree, range, type, new_lock->pid);
 			list_del(&new_lock->list);
-			printk(KERN_EMERG "list_del success");
 			spin_unlock(&waiting_list_spinlock);
-			printk(KERN_EMERG "spin unlock waiting list success");
 			list_add(&new_lock->list,&current_lock_list);
-			printk(KERN_EMERG "list add success");
 			spin_unlock(&current_list_spinlock); // problem
-			printk(KERN_EMERG "spin unlock current list success");
 			break;
-			printk(KERN_EMERG "pass break");
 		}else {
 			printk(KERN_EMERG "lockProcess failed: %d %d %d %d", degree, range, type, new_lock->pid);
 			spin_unlock(&waiting_list_spinlock);
-			printk(KERN_EMERG "lockProcess current list spinlock unlock success in else statement");
 			spin_unlock(&current_list_spinlock);
-			printk(KERN_EMERG "lockProcess waiting list spinlock unlock success in else statement"); // problem
 			set_current_state(TASK_INTERRUPTIBLE);
-			printk(KERN_EMERG "TASK_INTERRUPTIBLE success");
 			schedule();
-			printk(KERN_EMERG "SCHEDULE() success");
 		}
 	}
-	printk(KERN_EMERG "lockProcess before return");
+	printk(KERN_EMERG "lockProcess return success");
 	return 0;
 }
 
@@ -143,7 +131,6 @@ int wakeUp(void)
 {
 	int count = 0;
 	LIST_HEAD(temp_lock_list);
-    // spin_lock(&current_list_spinlock);
     spin_lock(&waiting_list_spinlock);
 	struct list_head *head;
     list_for_each(head, &waiting_lock_list) {
@@ -158,19 +145,18 @@ int wakeUp(void)
 		spin_unlock(&current_list_spinlock);
     }
     spin_unlock(&waiting_list_spinlock);
-    // spin_unlock(&current_list_spinlock);
 	
 	struct list_head *n;
 	list_for_each_safe(head, n, &temp_lock_list) {
 		list_del(head);
 	}
+	printk(KERN_EMERG "wake up success with count %d", count);
 	return count;
 }
 
 
 int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무조건 락이 잡혀있다는 가정하에 작업
 	spin_lock(&current_list_spinlock);
-	printk(KERN_EMERG "deleteProcess current_list_spinlock success");
 	struct list_head *head;
 	struct list_head *n;
 	int count = 0;
@@ -182,11 +168,9 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 			count++;
 		}
 	}
-	printk(KERN_EMERG "deleteProcess before unlock");
 	spin_unlock(&current_list_spinlock); // problem
-	printk(KERN_EMERG "deleteProcess current_list_spinlock unlock success");
 	wakeUp();
-	printk(KERN_EMERG "deleteProcess before return with %d", count);
+	printk(KERN_EMERG "deleteProcess success %d with %d %d %d", count, degree, range, type);
 	return count;
 }
 
@@ -220,7 +204,7 @@ asmlinkage int sys_rotunlock_write(int degree, int range) {
 void exit_rotlock(struct task_struct *task)
 {
 	if(task->isReadWriteLock == false) return;
-	printk(KERN_EMERG "is ReadWriteLock");
+	printk(KERN_EMERG "is ReadWriteLock and exiting");
 	struct list_head *a;
 	struct lock_struct *alock;
 	struct list_head *n;
@@ -229,7 +213,6 @@ void exit_rotlock(struct task_struct *task)
 	spin_lock(&current_list_spinlock);
 	list_for_each_safe(a, n, &current_lock_list){
 		alock = list_entry(a, struct lock_struct, list);
-		printk(KERN_EMERG "alock: %d %d %d , task pid: %d", alock->degree, alock->range, alock->pid, task->pid);
 		if(alock->pid == task->pid){
 			list_del(&alock->list);
 			list_del(&alock->templist);
