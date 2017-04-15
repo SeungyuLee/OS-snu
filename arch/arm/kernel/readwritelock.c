@@ -7,9 +7,6 @@
 #include<linux/spinlock_types.h>
 #include<linux/readwritelock.h>
 
-//static DEFINE_SPINLOCK(current_list_spinlock);
-//static DEFINE_SPINLOCK(waiting_list_spinlock);
-
 enum LockType {
 	kInvalid = 0,
 	kRead = 1,
@@ -117,19 +114,23 @@ int lockProcess(int degree, int range, int type) {
 			printk(KERN_EMERG "spin unlock waiting list success");
 			list_add(&new_lock->list,&current_lock_list);
 			printk(KERN_EMERG "list add success");
-			spin_unlock(&current_list_spinlock);
+			spin_unlock(&current_list_spinlock); // problem
 			printk(KERN_EMERG "spin unlock current list success");
 			break;
+			printk(KERN_EMERG "pass break");
 		}else {
 			printk(KERN_EMERG "lockProcess failed: %d %d %d %d", degree, range, type, new_lock->pid);
-			spin_unlock(&current_list_spinlock);
-			printk(KERN_EMERG "lockProcess current list spinlock unlock success in else statement");
 			spin_unlock(&waiting_list_spinlock);
-			printk(KERN_EMERG "lockProcess waiting list spinlock unlock success in else statement");
+			printk(KERN_EMERG "lockProcess current list spinlock unlock success in else statement");
+			spin_unlock(&current_list_spinlock);
+			printk(KERN_EMERG "lockProcess waiting list spinlock unlock success in else statement"); // problem
 			set_current_state(TASK_INTERRUPTIBLE);
+			printk(KERN_EMERG "TASK_INTERRUPTIBLE success");
 			schedule();
+			printk(KERN_EMERG "SCHEDULE() success");
 		}
 	}
+	printk(KERN_EMERG "lockProcess before return");
 	return 0;
 }
 
@@ -137,24 +138,22 @@ int wakeUp(void)
 {
 	int count = 0;
 	LIST_HEAD(temp_lock_list);
-    spin_lock(&current_list_spinlock);
-	printk(KERN_EMERG "wakeUp current_list_spinlock success");
+    // spin_lock(&current_list_spinlock);
     spin_lock(&waiting_list_spinlock);
-	printk(KERN_EMERG "wakeUp waiting_list_spinlock success");
 	struct list_head *head;
     list_for_each(head, &waiting_lock_list) {
         struct lock_struct *lock = list_entry(head,struct lock_struct,list);
+		spin_lock(&current_list_spinlock);
 		if(canLock(lock,&temp_lock_list)) {
 			INIT_LIST_HEAD(&lock->templist);
 			list_add(&lock->templist,&temp_lock_list);
             wake_up_process(pid_task(find_vpid(lock->pid),PIDTYPE_PID));
             count += 1;
 		}
+		spin_unlock(&current_list_spinlock);
     }
-    spin_unlock(&current_list_spinlock);
-	printk(KERN_EMERG "wakeUp current_list_spinlock unlock success");
     spin_unlock(&waiting_list_spinlock);
-	printk(KERN_EMERG "wakeUp waiting_list_spinlock unlock success");
+    // spin_unlock(&current_list_spinlock);
 	
 	struct list_head *n;
 	list_for_each_safe(head, n, &temp_lock_list) {
@@ -169,38 +168,44 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 	printk(KERN_EMERG "deleteProcess current_list_spinlock success");
 	struct list_head *head;
 	struct list_head *n;
-	printk(KERN_EMERG "deleteProcess before list traversal");
+	int count = 0;
 	list_for_each_safe(head, n, &current_lock_list) {
 		struct lock_struct *lock = list_entry(head,struct lock_struct, list);
 		if(lock->degree == degree && lock->range == range && lock->type == type && lock->pid == current->pid ) {
 			list_del(&lock->list);
 			kfree(lock);
+			count++;
 		}
 	}
-	printk(KERN_EMERG "deleteProcess after list traversal");
-	spin_unlock(&current_list_spinlock);
+	printk(KERN_EMERG "deleteProcess before unlock");
+	spin_unlock(&current_list_spinlock); // problem
 	printk(KERN_EMERG "deleteProcess current_list_spinlock unlock success");
 	wakeUp();
-	return 0;
+	printk(KERN_EMERG "deleteProcess before return with %d", count);
+	return count;
 }
 
 asmlinkage int sys_rotlock_read(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
+	if(range < 0) return -EINVAL;
 	return lockProcess(degree,range,kRead);
 }
 
 asmlinkage int sys_rotlock_write(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
+	if(range < 0) return -EINVAL;
 	return lockProcess(degree,range,kWrite);
 }
 
 asmlinkage int sys_rotunlock_read(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
-	return deleteProcess(degree, range, kRead);
+	if(range < 0) return -EINVAL;
+	int deleted = deleteProcess(degree, range, kRead);
+	if(deleted == 0) return -EINVAL; // error handling when deleted > 1 should be added
+	return deleted;
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
-	if(degree >= 360 || degree < 0) return -EINVAL;
-	return deleteProcess(degree, range, kWrite);
+	if(range < 0) return -EINVAL;
+	int deleted = deleteProcess(degree, range, kWrite);
+	if(deleted == 0 ) return -EINVAL; // error handling when deleted > 1 should be added
+	return deleted;
 }
 
