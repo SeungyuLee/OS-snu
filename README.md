@@ -6,7 +6,7 @@ Project 2
 The goal of this assignment is implementing a new kernel syncronization primitive which provides reader-writer lock based on device rotation in Linux. First, we wrote new system call to use user-space daemon given from TA. Second, we implemented rotation-based reader-writer locks. Finally, we wrote Selector and Trial for testing.
 
 
-## Impementation
+## Implementation
 
 
 ### 1. set_rotation System Call
@@ -23,7 +23,7 @@ void set_rotation(int degree)
 ...
 ```
 
-set_rotation() function is implemented in rotation.c . It is called In set_rotation System call to set degree of device to given value. 
+set_rotation() function is implemented in rotation.c . It is called in set_rotation System call to set degree of device to given value. 
 
 
 
@@ -36,7 +36,7 @@ First, The policies of determining whether lock is possible are as follows.
         1. If the current degree of device is not in the range of requested lock, lock is not possible.
         2. If requested lock is Reader lock
                 2-1. If there is Writer lock that overlaps range of requested lock among acqiured locks, lock is not possible.
-                2-2. If there is Writer lock that overlaps range of requested lockand waits (sleep) by Reader lock among pendding locks, lock is not possible.
+                2-2. If there is Writer lock that overlaps range of requested lock and waits (sleep) by Reader lock among pending locks, lock is not possible.
         3. If requested lock is Writer lock
                 3-1. If there is Reader/Writer lock that overlaps range of requested lock among acquired locks, lock is not possible.
 
@@ -44,13 +44,13 @@ First, according to the given rule of rotation_based lock, if the current degree
 
 Using this policy, we determined whether Reader/Writer can grab a requested lock. Also we made a **current_lock_list** and **waiting_lock_list** because there may be several grabbed locks at the same time since their range doesn't overlap each other and there may be several pending locks at the same time waiting to satisfy the conditions. Depending on the lock availability, the requested lock is stored in each list. 
 
-Whenever a lock is requested, the process to check the lock condition is executed in the loop. If the condition is satisfied, the requested lock is stored in the **current_lock_list** and returns. That is grabbing a lock. On the other hand, If the condition is not satisfied, the requested lock is inserted into the **wait_lock_list** and the process requesting the lock becomes TASK_INTERRUBTIBLE state.
+Whenever a lock is requested, the process to check the lock condition is executed in the loop. If the condition is satisfied, the requested lock is stored in the **current_lock_list** and returns. That is grabbing a lock. On the other hand, If the condition is not satisfied, the requested lock is inserted into the **waiting_lock_list** and the process requesting the lock becomes TASK_INTERRUBTIBLE state.
 
-When an unlock request comes in, it removes the requested lock from the **current_lock_list** and wakes up all the processes that requested a lock that meets the condition in the **wait_lock_list**. This is releasing the lock.
+When an unlock request comes in, it removes the requested lock from the **current_lock_list** and wakes up all the processes that requested a lock that meets the condition in the **waiting_lock_list**. This is releasing the lock.
 
 The waking process loops again through the previous lock request system call function.
 
-If multiple process try to access **curren_lock_list** and **wait_lock_list** at the same time, _synchronization_ problems may occur. Therefore, we lock the process each time process access each list using **spinlock**. In order to keep the concept of locking the data not code, we made separate spinlock for **current_lock_list** and spinlock for **wait_lock_list** respectively.
+If multiple process try to access **current_lock_list** and **waiting_lock_list** at the same time, _synchronization_ problems may occur. Therefore, we lock the process each time process access each list using **spinlock**. In order to keep the concept of locking the data not code, we made separate spinlock for **current_lock_list** and spinlock for **waiting_lock_list** respectively.
 
 
 ### 3. Implementation of `readwritelock.c`
@@ -73,14 +73,14 @@ asmlinkage int sys_rotlock_write(int degree, int range) {
 asmlinkage int sys_rotunlock_read(int degree, int range) {
 	if(range < 0) return -EINVAL;
 	int deleted = deleteProcess(degree, range, kRead);
-	if(deleted == 0) return -EINVAL; // error handling when deleted > 1 should be added
+	if(deleted == 0) return -EINVAL;
 	return deleted;
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
 	if(range < 0) return -EINVAL;
 	int deleted = deleteProcess(degree, range, kWrite);
-	if(deleted == 0 ) return -EINVAL; // error handling when deleted > 1 should be added
+	if(deleted == 0 ) return -EINVAL;
 	return deleted;
 }
 ```
@@ -113,7 +113,7 @@ static DEFINE_SPINLOCK(waiting_list_spinlock);
 ..
 ```
  
-Spinlock is also declared to hold the lock for each list. These spinlocks are used in `lockProcess()` to prevent other processes from accessing lists each time locks are insertedand removed from the lists.
+Spinlock is also declared to hold the lock for each list. These spinlocks are used in `lockProcess()` to prevent other processes from accessing lists each time locks are inserted and removed from the lists.
 
 The requested lock is determined to be possible to grabbed by the canLock() function. 
 
@@ -209,7 +209,8 @@ root:~> ./trial 0 (example)
 
 1. we learned how to use synchronization primitives in practice such as spinlocks, atomic_t in linux
 2. now we know how ctrl + c works in depth since it caused some trouble while debugging.
-3. system call number 384 has a problem
+3. system call number 384 has some problem
+4. we have to lock "data", not code when implementing synchronization primitives.
 
 ## Team Members
 
