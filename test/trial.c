@@ -50,16 +50,15 @@ int main(int argc, char* argv[]){
 	
 	while(keepRunning){
 		if(syscall(SYSCALL_ROTLOCK_READ, 90, 90) == 0){
-			
-			fp = fopen("integer.txt", "r");
+			// fp = fopen("integer.txt", "r");
+			if(NULL != (fp = fopen("integer.txt", "r"))){
 			fscanf(fp, "%d", &num);
 			printf("trial-%d: ", id);
 			printFactor(num);
 			fclose(fp);
-			
+			}
 			syscall(SYSCALL_ROTUNLOCK_READ, 90, 90);
 		}
-		printf("failed\n");
 		sleep(1);
 	}
 
