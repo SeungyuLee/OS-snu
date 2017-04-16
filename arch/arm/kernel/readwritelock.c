@@ -113,7 +113,7 @@ int lockProcess(int degree, int range, int type) {
 			list_del(&new_lock->list);
 			spin_unlock(&waiting_list_spinlock);
 			list_add(&new_lock->list,&current_lock_list);
-			spin_unlock(&current_list_spinlock); // problem
+			spin_unlock(&current_list_spinlock);
 			printk(KERN_EMERG "canLock taskState: %d", current->state);
 			break;
 		}else {
@@ -167,7 +167,7 @@ int wakeUp(void)
 }
 
 
-int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무조건 락이 잡혀있다는 가정하에 작업
+int deleteProcess(int degree, int range, int type) {
 	spin_lock(&current_list_spinlock);
 	struct list_head *head;
 	struct list_head *n;
@@ -180,7 +180,7 @@ int deleteProcess(int degree, int range, int type) { // 언락이 불릴 땐 무
 			count++;
 		}
 	}
-	spin_unlock(&current_list_spinlock); // problem
+	spin_unlock(&current_list_spinlock);
 	wakeUp();
 	printk(KERN_EMERG "deleteProcess success %d with %d %d %d", count, degree, range, type);
 	return count;
@@ -201,14 +201,14 @@ asmlinkage int sys_rotlock_write(int degree, int range) {
 asmlinkage int sys_rotunlock_read(int degree, int range) {
 	if(range < 0) return -EINVAL;
 	int deleted = deleteProcess(degree, range, kRead);
-	if(deleted == 0) return -EINVAL; // error handling when deleted > 1 should be added
+	if(deleted == 0) return -EINVAL; 
 	return deleted;
 }
 
 asmlinkage int sys_rotunlock_write(int degree, int range) {
 	if(range < 0) return -EINVAL;
 	int deleted = deleteProcess(degree, range, kWrite);
-	if(deleted == 0 ) return -EINVAL; // error handling when deleted > 1 should be added
+	if(deleted == 0 ) return -EINVAL; 
 	return deleted;
 }
 
