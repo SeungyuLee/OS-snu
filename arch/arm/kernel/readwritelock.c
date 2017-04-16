@@ -6,6 +6,7 @@
 #include<linux/spinlock.h>
 #include<linux/spinlock_types.h>
 #include<linux/readwritelock.h>
+#include<linux/kthread.h>
 
 static LIST_HEAD(current_lock_list);
 static LIST_HEAD(waiting_lock_list);
@@ -61,7 +62,7 @@ bool canLock(struct lock_struct *info, struct list_head *temp_lock_list) {
 	}
 	if(NULL != temp_lock_list) {
 		list_for_each(head,temp_lock_list) {
-			struct lock_struct *lock = list_entry(head,struct lock_struct,templist);
+			struct lock_struct *lock = list_entry(head,struct lock_struct,list);
 			if ( isCrossed(info,lock) ) { // 겹치는 lock이 있다
 				if (info->type == kWrite || lock->type == kWrite) { // 둘다 read lock이 아닐경우
 					return false;
@@ -100,7 +101,6 @@ int lockProcess(int degree, int range, int type) {
 	new_lock->type = type;
 	new_lock->pid = current->pid;
 	INIT_LIST_HEAD(&new_lock->list);
-	INIT_LIST_HEAD(&new_lock->templist);
 	spin_lock(&waiting_list_spinlock);
 	list_add(&new_lock->list,&waiting_lock_list);
 	spin_unlock(&waiting_list_spinlock);
@@ -114,13 +114,16 @@ int lockProcess(int degree, int range, int type) {
 			spin_unlock(&waiting_list_spinlock);
 			list_add(&new_lock->list,&current_lock_list);
 			spin_unlock(&current_list_spinlock); // problem
+			printk(KERN_EMERG "canLock taskState: %d", current->state);
 			break;
 		}else {
 			printk(KERN_EMERG "lockProcess failed: %d %d %d %d", degree, range, type, new_lock->pid);
 			spin_unlock(&waiting_list_spinlock);
 			spin_unlock(&current_list_spinlock);
 			set_current_state(TASK_INTERRUPTIBLE);
+			printk(KERN_EMERG "taskState: %d", current->state);
 			schedule();
+			if(unlikely(signal_pending_state(TASK_INTERRUPTIBLE, current))) return -1;
 		}
 	}
 	printk(KERN_EMERG "lockProcess return success");
@@ -137,8 +140,14 @@ int wakeUp(void)
         struct lock_struct *lock = list_entry(head,struct lock_struct,list);
 		spin_lock(&current_list_spinlock);
 		if(canLock(lock,&temp_lock_list)) {
-			INIT_LIST_HEAD(&lock->templist);
-			list_add(&lock->templist,&temp_lock_list);
+			struct lock_struct *new_lock;
+			new_lock = kmalloc(sizeof(*new_lock), GFP_KERNEL);
+			new_lock->degree = lock->degree;
+			new_lock->range = lock->range;
+			new_lock->type = lock->type;
+			new_lock->pid = lock->pid;
+			INIT_LIST_HEAD(&new_lock->list);
+			list_add(&new_lock->list,&temp_lock_list);
             wake_up_process(pid_task(find_vpid(lock->pid),PIDTYPE_PID));
             count += 1;
 		}
@@ -148,7 +157,10 @@ int wakeUp(void)
 	
 	struct list_head *n;
 	list_for_each_safe(head, n, &temp_lock_list) {
+		struct lock_struct *lock = list_entry(head,struct lock_struct,list);
 		list_del(head);
+		kfree(lock);
+		
 	}
 	printk(KERN_EMERG "wake up success with count %d", count);
 	return count;
@@ -215,7 +227,6 @@ void exit_rotlock(struct task_struct *task)
 		alock = list_entry(a, struct lock_struct, list);
 		if(alock->pid == task->pid){
 			list_del(&alock->list);
-			list_del(&alock->templist);
 			kfree(alock);
 			count ++;
 		}
@@ -228,11 +239,12 @@ void exit_rotlock(struct task_struct *task)
 	struct list_head *m;
 
 	spin_lock(&waiting_list_spinlock);
+
 	list_for_each_safe(w, m, &waiting_lock_list){
+
 		wlock = list_entry(w, struct lock_struct, list);
 		if(wlock->pid == task->pid){
 			list_del(&wlock->list);
-			list_del(&wlock->templist);
 			kfree(wlock);
 			count ++;
 		}

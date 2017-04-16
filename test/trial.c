@@ -59,6 +59,7 @@ int main(int argc, char* argv[]){
 			
 			syscall(SYSCALL_ROTUNLOCK_READ, 90, 90);
 		}
+		printf("failed\n");
 		sleep(1);
 	}
 
