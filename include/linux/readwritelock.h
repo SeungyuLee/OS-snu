@@ -12,7 +12,7 @@ struct lock_struct {
 	int degree,range;
 	int type;
 	pid_t pid;
-	struct list_head list,templist;
+	struct list_head list;
 };
 
 
