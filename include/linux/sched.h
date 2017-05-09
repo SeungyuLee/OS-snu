@@ -1006,7 +1006,7 @@ struct sched_statistics {
 	u64			nr_wakeups_affine_attempts;
 	u64			nr_wakeups_passive;
 	u64			nr_wakeups_idle;
-;
+};
 #endif
 
 struct sched_entity {
