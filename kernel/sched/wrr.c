@@ -5,6 +5,14 @@
 
 #include "sched.h"
 #include <linux/slab.h>
+#define WRR_DEFAULT_TIMESLICE 10
+
+static DEFINE_SPINLOCK(SET_WEIGHT_LOCK);
+
+#ifdef CONFIG_SMP
+static void load_balance_wrr(void);
+static DEFINE_SPINLOCK(LOAD_BALANCE_LOCK);
+#endif
 
 void init_wrr_rq(struct wrr_rq *wrr_rq, struct rq *rq)
 {
@@ -52,7 +60,29 @@ static void yield_task_wrr(struct rq *rq)
 
 static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
 {
-	/* needs to be implemented */ 
+	int curr_cpu = task_cpu(p);
+	int cpu;
+	int minimum_weight = INT_MAX;
+
+	if (p->nr_cpus_allowed == 1)
+		return curr_cpu;
+
+	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
+		return curr_cpu;
+
+	rcu_read_lock();
+	for_each_possible_cpu(cpu){
+		if (my_wrr_info.total_weight[cpu] < minimum_weight) {
+			minimum_weight = my_wrr_info.total_weight[cpu];
+			curr_cpu = cpu;
+		}
+
+
+	}
+
+	rcu_read_unlock();
+
+	return curr_cpu;
 }
 
 
@@ -66,7 +96,21 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
-	/* needs to be implemented */
+	struct sched_wr_entity *wrr_se = &p->wrr;
+	struct wrr_rq *wrr_rq = &rq->wrr;
+	
+	if (wrr_se == NULL)
+		return;
+
+	if (--p->wrr.time_slice)
+		return;
+
+	p->wrr.time_slice = WRR_DEFAULT_TIMESLICE * p->wrr.weight;
+	
+	list_move_tail(&wrr_se->run_list, &wrr_rq->queue);
+		
+	set_tsk_need_resched(p);
+	return;
 }
 
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
