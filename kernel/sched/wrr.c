@@ -35,6 +35,21 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	raw_spin_unlock(&wrr_info_locks[cpu]);
 }
 
+static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
+{
+	list_del(&(p->wrr.run_list));
+	dec_nr_running(rq);
+	rq->wrr.nr_running--;
+	rq->wrr.total_weight -= p->wrr.weight;
+	if (p->wrr.weight > 1)
+			p->wrr.weight = p->wrr.weight - 1;
+
+#ifdef CONFIG_SMP
+	if (rq->wrr.nr_running == 0)
+			pull_task_from_cpus(rq);
+#endif
+}
+
 
 static struct task_struct *pick_next_task_wrr(struct rq *rq)
 {
