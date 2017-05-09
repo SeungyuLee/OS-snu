@@ -338,24 +338,12 @@ static inline int rt_bandwidth_enabled(void)
 	return sysctl_sched_rt_runtime >= 0;
 }
 
-<<<<<<< HEAD
 /* Weighted-Round-Robin classes' related filed in a runqueue: */
-struct wrr_rq {
-	struct list_head queue;
-	unsigned int wrr_nr_running;
-#ifdef CONFIG_SMP
-	unsigned long wrr_nr_migratory;
-	unsigned long wrr_nr_total;
-	int overloaded;
-	struct plist_head pushable_tasks;
-#endif
-=======
 struct wrr_rq {
 	int total_weight;
 	int nr_running;
 	struct load_weight load;
 	struct list_head queue;
->>>>>>> f2a492bd60c31025151b0d7c099d76c7720d7cf7
 };
 
 /* Real-Time classes' related field in a runqueue: */
