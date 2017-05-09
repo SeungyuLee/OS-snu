@@ -7032,7 +7032,7 @@ void __init sched_init(void)
 		struct rq *rq;
 		
 		my_wrr_info.num_cpus++;
-		raw_spin_lock_init(&wrr_info_locks);
+		raw_spin_lock_init(&wrr_info_locks[i]);
 		rq = cpu_rq(i);
 		raw_spin_lock_init(&rq->lock);
 		rq->nr_running = 0;
@@ -7040,7 +7040,7 @@ void __init sched_init(void)
 		rq->calc_load_update = jiffies + LOAD_FREQ;
 		init_cfs_rq(&rq->cfs);
 		init_rt_rq(&rq->rt, rq);
-		init_wrr_rq(&rq->wrr);
+		init_wrr_rq(&rq->wrr, rq);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		root_task_group.shares = ROOT_TASK_GROUP_LOAD;
 		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);
