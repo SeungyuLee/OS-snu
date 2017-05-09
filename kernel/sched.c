@@ -69,14 +69,19 @@ asmlinkage int sched_setweight(pid_t pid, int weight){
 	else
 		task->wrr.weight = (unsigned int) weight;
 	
-
-	// update the time slice computation
-		
-	
 	
 	spin_lock(&set_weight_lock);
 
 	rq = task_rq(task);
+	
+	// 
+	if( rq->curr == task || current == task)
+		task->wrr.time_slice = task->wrr.weight * 10;
+	else {
+		task->wrr.time_slice = task->wrr.weight * 10;
+		//task->wrr.time_left = task->wrr.time_slice / 10;
+	}
+
 	wrr_rq = &rq->wrr;
 	wrr_rq->total_weight -= old_weight;
 	wrr_rq->total_weight += weight;
