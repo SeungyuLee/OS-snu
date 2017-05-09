@@ -338,6 +338,7 @@ static inline int rt_bandwidth_enabled(void)
 	return sysctl_sched_rt_runtime >= 0;
 }
 
+/* Weighted-Round-Robin classes' related filed in a runqueue: */
 struct wrr_rq {
 	int total_weight;
 	int nr_running;
