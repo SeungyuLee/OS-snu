@@ -84,3 +84,29 @@ asmlinkage int sched_setweight(pid_t pid, int weight){
 	spin_unlock(&set_weight_lock);
 	return 0;
 }
+
+asmlinkage int sched_getweight(pid_t pid){
+	int result;
+	struct task_struct *task = NULL;
+	struct pid *pid_struct = NULL;
+
+	if (pid < 0)
+		return -EINVAL;
+
+	if (pid == 0)
+		result = current->wrr.weight;
+	else {
+		pid_struct = find_get_pid(pid);
+		if(pid_struct == NULL)
+			return -EINVAL;
+		
+		task = get_pid_task(pid_struct, PIDTYPE_PID);
+		if(task == NULL)
+			return -EINVAL;
+
+		result = task->wrr.weight;
+	}
+
+	return result;
+	
+}
