@@ -999,7 +999,7 @@ struct sched_statistics {
 	u64			nr_wakeups_affine_attempts;
 	u64			nr_wakeups_passive;
 	u64			nr_wakeups_idle;
-};
+;
 #endif
 
 struct sched_entity {
@@ -1036,6 +1036,12 @@ struct sched_entity {
 	/* Per-entity load-tracking */
 	struct sched_avg	avg;
 #endif
+};
+
+struct sched_wrr_entity {
+	struct list_head run_list;
+	unsigned int time_slice;
+	int weight;
 };
 
 struct sched_rt_entity {
@@ -1081,6 +1087,7 @@ struct task_struct {
 	unsigned int rt_priority;
 	const struct sched_class *sched_class;
 	struct sched_entity se;
+	struct sched_wrr_entity wrr;
 	struct sched_rt_entity rt;
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;

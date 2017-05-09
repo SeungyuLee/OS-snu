@@ -325,6 +325,18 @@ static inline int rt_bandwidth_enabled(void)
 	return sysctl_sched_rt_runtime >= 0;
 }
 
+/* Weighted-Round-Robin classes' related filed in a runqueue: */
+struct wrr_rq {
+	struct list_head queue;
+	unsigned int wrr_nr_running;
+#ifdef CONFIG_SMP
+	unsigned long wrr_nr_migratory;
+	unsigned long wrr_nr_total;
+	int overloaded;
+	struct plist_head pushable_tasks;
+#endif
+};
+
 /* Real-Time classes' related field in a runqueue: */
 struct rt_rq {
 	struct rt_prio_array active;
@@ -421,6 +433,7 @@ struct rq {
 	u64 nr_switches;
 
 	struct cfs_rq cfs;
+	struct wrr_rq wrr;
 	struct rt_rq rt;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
@@ -1326,6 +1339,7 @@ extern void print_rt_stats(struct seq_file *m, int cpu);
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq);
+extern void init_wrr_rq(struct wrr_rq *wrr_rq, struct rq *rq);
 
 extern void cfs_bandwidth_usage_inc(void);
 extern void cfs_bandwidth_usage_dec(void);
