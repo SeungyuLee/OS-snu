@@ -90,6 +90,13 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+struct wrr_info my_wrr_info = {
+	.num_cpus = 0,
+	.nr_running = {0},
+	.total_weight = {0},
+};
+raw_spinlock_t wrr_info_locks[MAX_CPUS];
+
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
 	unsigned long delta;
@@ -1636,6 +1643,9 @@ static void __sched_fork(struct task_struct *p)
 #endif
 
 	INIT_LIST_HEAD(&p->rt.run_list);
+	INIT_LIST_HEAD(&p->wrr.run_list);
+	p->wrr.weight = 1; // need modify
+	p->wrr.time_slice = 10 * p->wrr.weight; 
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	INIT_HLIST_HEAD(&p->preempt_notifiers);
@@ -1701,7 +1711,7 @@ void sched_fork(struct task_struct *p)
 	 */
 	if (unlikely(p->sched_reset_on_fork)) {
 		if (task_has_rt_policy(p)) {
-			p->policy = SCHED_NORMAL;
+			p->policy = SCHED_NORMAL; // need modify
 			p->static_prio = NICE_TO_PRIO(0);
 			p->rt_priority = 0;
 		} else if (PRIO_TO_NICE(p->static_prio) < 0)
@@ -1716,9 +1726,11 @@ void sched_fork(struct task_struct *p)
 		 */
 		p->sched_reset_on_fork = 0;
 	}
-
-	if (!rt_prio(p->prio))
-		p->sched_class = &fair_sched_class;
+	
+	if (task_has_wrr_policy(p))
+		p->sched_class = &wrr_sched_class;
+	else if (!rt_prio(p->prio))
+	 	p->sched_class = &fair_sched_class;
 
 	if (p->sched_class->task_fork)
 		p->sched_class->task_fork(p);
@@ -2915,11 +2927,16 @@ pick_next_task(struct rq *rq)
 	 * Optimization: we know that if all tasks are in
 	 * the fair class we can call that function directly:
 	 */
+	
+	/*
+	// need modify // need erase
 	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq);
 		if (likely(p))
 			return p;
 	}
+	// to here
+	*/
 
 	for_each_class(class) {
 		p = class->pick_next_task(rq);
@@ -3659,7 +3676,9 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 
 	if (rt_prio(prio))
 		p->sched_class = &rt_sched_class;
-	else
+	else if (task_has_wrr_policy)
+		p->sched_class = &wrr_sched_class;
+	else 
 		p->sched_class = &fair_sched_class;
 
 	p->prio = prio;
@@ -3858,6 +3877,8 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 			do_set_cpus_allowed(p, &hmp_slow_cpu_mask);
 #endif
 	}
+	else if(task_has_wrr_policy(p))
+		p->sched_class = &wrr_sched_class;
 	else
 		p->sched_class = &fair_sched_class;
 	set_load_weight(p);
@@ -3901,7 +3922,7 @@ recheck:
 
 		if (policy != SCHED_FIFO && policy != SCHED_RR &&
 				policy != SCHED_NORMAL && policy != SCHED_BATCH &&
-				policy != SCHED_IDLE)
+				policy != SCHED_IDLE && policy != SCHED_WRR)
 			return -EINVAL;
 	}
 
@@ -4591,6 +4612,7 @@ SYSCALL_DEFINE1(sched_get_priority_max, int, policy)
 		ret = MAX_USER_RT_PRIO-1;
 		break;
 	case SCHED_NORMAL:
+	case SCHED_WRR:
 	case SCHED_BATCH:
 	case SCHED_IDLE:
 		ret = 0;
@@ -4616,6 +4638,7 @@ SYSCALL_DEFINE1(sched_get_priority_min, int, policy)
 		ret = 1;
 		break;
 	case SCHED_NORMAL:
+	case SCHED_WRR:
 	case SCHED_BATCH:
 	case SCHED_IDLE:
 		ret = 0;
@@ -7007,7 +7030,9 @@ void __init sched_init(void)
 
 	for_each_possible_cpu(i) {
 		struct rq *rq;
-
+		
+		my_wrr_info.num_cpus++;
+		raw_spin_lock_init(&wrr_info_locks);
 		rq = cpu_rq(i);
 		raw_spin_lock_init(&rq->lock);
 		rq->nr_running = 0;
@@ -7015,6 +7040,7 @@ void __init sched_init(void)
 		rq->calc_load_update = jiffies + LOAD_FREQ;
 		init_cfs_rq(&rq->cfs);
 		init_rt_rq(&rq->rt, rq);
+		init_wrr_rq(&rq->wrr);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		root_task_group.shares = ROOT_TASK_GROUP_LOAD;
 		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);
@@ -7108,7 +7134,7 @@ void __init sched_init(void)
 	/*
 	 * During early bootup we pretend to be a normal task:
 	 */
-	current->sched_class = &fair_sched_class;
+	current->sched_class = &wrr_sched_class;
 
 #ifdef CONFIG_SMP
 	zalloc_cpumask_var(&sched_domains_tmpmask, GFP_NOWAIT);
