@@ -72,6 +72,13 @@ extern __read_mostly int scheduler_running;
  */
 #define RUNTIME_INF	((u64)~0ULL)
 
+static inline int wrr_policy(int policy)
+{
+	if (policy == SCHED_WRR)
+		return 1;
+	return 0;
+}
+
 static inline int rt_policy(int policy)
 {
 	if (policy == SCHED_FIFO || policy == SCHED_RR)
@@ -82,6 +89,11 @@ static inline int rt_policy(int policy)
 static inline int task_has_rt_policy(struct task_struct *p)
 {
 	return rt_policy(p->policy);
+}
+
+static inline int task_has_wrr_policy(struct task_struct *p)
+{
+	return wrr_policy(p->policy);
 }
 
 /*
@@ -108,6 +120,7 @@ extern struct mutex sched_domains_mutex;
 
 struct cfs_rq;
 struct rt_rq;
+struct wrr_rq;
 
 extern struct list_head task_groups;
 
@@ -325,6 +338,7 @@ static inline int rt_bandwidth_enabled(void)
 	return sysctl_sched_rt_runtime >= 0;
 }
 
+<<<<<<< HEAD
 /* Weighted-Round-Robin classes' related filed in a runqueue: */
 struct wrr_rq {
 	struct list_head queue;
@@ -335,6 +349,13 @@ struct wrr_rq {
 	int overloaded;
 	struct plist_head pushable_tasks;
 #endif
+=======
+struct wrr_rq {
+	int total_weight;
+	int nr_running;
+	struct load_weight load;
+	struct list_head queue;
+>>>>>>> f2a492bd60c31025151b0d7c099d76c7720d7cf7
 };
 
 /* Real-Time classes' related field in a runqueue: */
@@ -435,6 +456,7 @@ struct rq {
 	struct cfs_rq cfs;
 	struct wrr_rq wrr;
 	struct rt_rq rt;
+	struct wrr_rq wrr;
 
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	/* list of leaf cfs_rq on this cpu: */
@@ -1340,6 +1362,10 @@ extern void print_rt_stats(struct seq_file *m, int cpu);
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq);
 extern void init_wrr_rq(struct wrr_rq *wrr_rq, struct rq *rq);
+<<<<<<< HEAD
+=======
+extern void set_wrr_weight(int weight);
+>>>>>>> f2a492bd60c31025151b0d7c099d76c7720d7cf7
 
 extern void cfs_bandwidth_usage_inc(void);
 extern void cfs_bandwidth_usage_dec(void);
