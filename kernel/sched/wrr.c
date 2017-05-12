@@ -90,6 +90,30 @@ static void update_curr_wrr(struct rq *rq)
 	cpuacct_charge(curr, delta_exec);
 }
 
+static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
+{
+	struct list_head *head;
+	struct sched_wrr_entity *wrr_entity = sched_wrr_entity_of_task(p);
+	struct wrr_rq *wrr_rq = sched_wrr_rq(rq);
+	head = &wrr_rq->run_queue.run_list;
+
+	/* Check if the task is the only one in the run-queue.
+	* In this case, we won't need to re-queue it can just
+	* leave it as it is. */
+	if (wrr_rq->size == 1)
+		return;
+
+
+	spin_lock(&wrr_rq->wrr_rq_lock);
+
+	/* There is more than 1 task in queue, let's move this
+	* one to the back of the queue */
+	list_move_tail(&wrr_entity->run_list, head);
+
+
+	spin_unlock(&wrr_rq->wrr_rq_lock);
+}
+
 static struct wrr_rq *wrr_rq_of_wrr_entity(struct sched_wrr_entity *wrr_entity)
 {
 	struct task_struct *p = wrr_entity->task;
@@ -129,31 +153,72 @@ static void yield_task_wrr(struct rq *rq)
 
 static struct task_struct *pick_next_task_wrr(struct rq *rq)
 {
-	struct task_struct *next = NULL;
-	if (!list_empty(&(rq->wrr.queue)))
-		next = _find_container(rq->wrr.queue.next);
-	return next;
+	struct task_struct *p;
+	struct sched_wrr_entity *head_entity;
+	struct sched_wrr_entity *next_entity;
+	struct list_head *head;
+	struct wrr_rq *wrr_rq =  &rq->wrr;
+
+	/* There are no runnable tasks */
+	if (rq->nr_running <= 0)
+		return NULL;
+
+	/* Pick the first element in the queue.
+	* The item will automatically be re-queued back, in task_tick
+	* funciton */
+	head_entity = &wrr_rq->run_queue;
+	head = &head_entity->run_list;
+
+	next_entity = list_entry(head->next, struct sched_wrr_entity, run_list);
+
+	p = wrr_task_of(next_entity);
+
+	if (p == NULL)
+		return p;
+
+	p->se.exec_start = rq->clock_task;
+
+	/* Recompute the time left + time slice value incase weight
+	* of task has been changed */
+
+	return p;
 }
+
 
 
 
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
-	struct sched_wrr_entity *wrr_se = &p->wrr;
-	struct wrr_rq *wrr_rq = &rq->wrr;
-	
-	if (wrr_se == NULL)
-		return;
+	/* Still to be tested  */
+		struct timespec now;
 
-	if (--p->wrr.time_slice)
-		return;
+		struct sched_wrr_entity *wrr_entity = &curr->wrr;
 
-	p->wrr.time_slice = WRR_DEFAULT_TIMESLICE * p->wrr.weight;
-	
-	list_move_tail(&wrr_se->run_list, &wrr_rq->queue);
-		
-	set_tsk_need_resched(p);
-	return;
+		getnstimeofday(&now);
+
+		/* Update the current run time statistics. */
+		update_curr_wrr(rq);
+
+		if (--wrr_entity->time_left) /* there is still time left */
+			return;
+
+		/* the time_slice is in milliseconds and we need to
+		* convert it to ticks units */
+		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+
+
+		/* Requeue to the end of the queue if we are not the only
+		* task on the queue (i.e. if there is more than 1 task) */
+		if (wrr_entity->run_list.prev != wrr_entity->run_list.next) {
+
+			requeue_task_wrr(rq, curr);
+			/* Set rescheduler for later since this function
+			* is called during a timer interrupt */
+			set_tsk_need_resched(curr);
+		} else {
+			/* No need for a requeue */
+			set_tsk_need_resched(curr);
+	}
 }
 
 
