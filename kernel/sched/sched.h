@@ -342,10 +342,11 @@ static inline int rt_bandwidth_enabled(void)
 
 /* Weighted-Round-Robin classes' related filed in a runqueue: */
 struct wrr_rq {
-	int total_weight;
-	int nr_running;
+	unsigned int total_weight;
+	unsigned int nr_running;
 	struct load_weight load;
 	struct list_head queue;
+	spinlock_t wrr_rq_lock;
 };
 
 /* Real-Time classes' related field in a runqueue: */
