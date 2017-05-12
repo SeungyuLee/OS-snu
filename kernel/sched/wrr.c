@@ -22,6 +22,28 @@ static int valid_weight(unsigned int weight)
 		return 0;
 }
 
+static void init_wrr_rq(struct wrr_rq *wrr_rq)
+{
+	struct sched_wrr_entity *wrr_entity;
+	wrr_rq->nr_running = 0;
+	wrr_rq->size = 0;
+	wrr_rq->curr = NULL;
+	wrr_rq->total_weight = 0;
+
+	spin_lock_init(&(wrr_rq->wrr_rq_lock));
+
+	/* Initialize the run queue list */
+	wrr_entity = &wrr_rq->run_queue;
+	INIT_LIST_HEAD(&wrr_entity->run_list);
+
+	wrr_entity->task = NULL;
+	wrr_entity->weight = 0;
+	wrr_entity->time_slice = 0;
+	wrr_entity->time_left = 0;
+
+
+}
+
 static void init_task_wrr(struct task_struct *p)
 {
 	struct sched_wrr_entity *wrr_entity;
