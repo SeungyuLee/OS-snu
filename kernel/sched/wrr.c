@@ -45,6 +45,37 @@ static void init_task_wrr(struct task_struct *p)
 	INIT_LIST_HEAD(&wrr_entity->run_list);
 }
 
+static int valid_weight(unsigned int weight)
+{
+	if(weight >= SCHED_WRR_MIN_WEIGHT && weight <= SCHED_WRR_MAX_WEIGHT)
+		return 1;
+	else
+		return 0;
+}
+
+static void init_task_wrr(struct task_struct *p)
+{
+	struct sched_wrr_entity *wrr_entity;
+	if (p == NULL)	return;
+
+	wrr_entity = &p->wrr;
+	wrr_entity->task = p;
+	/* Use Default Parameters if the weight is still the default, * or weight is invalid */
+	if (wrr_entity->weight == SCHED_WRR_DEFAULT_WEIGHT ||								    !valid_weight(wrr_entity->weight)) {
+
+		wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
+
+		wrr_entity->time_slice = SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
+		wrr_entity->time_left =	wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+	} else { /* Use the current weight value */
+		wrr_entity->time_slice = wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
+		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+
+	}
+	/* Initialize the list head just to be safe */
+	INIT_LIST_HEAD(&wrr_entity->run_list);
+}
+
 static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct wrr_rq *wrr_rq = &rq->wrr;
