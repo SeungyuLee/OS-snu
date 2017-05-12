@@ -335,7 +335,7 @@ static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
 */
 
 
-const struct sched_class sched_wrr_class = 
+const struct sched_class wrr_sched_class = 
 {
 	.next			= &fair_sched_class,
 	.enqueue_task	= enqueue_task_wrr,
