@@ -178,17 +178,84 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 	return;
 }
 
+
+static int most_idle_cpu(void)
+{	// counter needed?
+	int cpu, total_weight;
+	int idle_cpu = -1;
+	int lowest_total_weight = INT_MAX;
+	struct rq *rq;
+	struct wrr_rq *wrr_rq;
+
+	for_each_online_cpu(cpu) {
+		rq = cpu_rq(cpu);
+		wrr_rq = &rq->wrr;
+		total_weight = wrr_rq->total_weight;
+
+		if (total_lowest_weight > total_weight) {
+			total_lowest_weight = total_weight;
+			idle_cpu = cpu;
+		}
+	}
+
+	return idle_cpu;
+}
+
+
+static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
+{
+	int cpu = most_idle_cpu();
+
+	if (cpu == -1) return task_cpu(p);
+
+	return cpu;
+}
+
+static void set_curr_task_wrr(struct rq *rq)
+{
+	struct task_struct *p = rq->curr;
+
+	p->se.exec_start = rq->clock_task;
+
+	rq->wrr.curr = &p->wrr;
+}
+
+static void load_balance_wrr(void)
+{
+	/*
+	int cpu;
+	int selected_cpu;
+	struct rq *rq, *rq_of_the_task, *rq_of_most_idle_wrr;
+	struct wrr_rq *wrr_rq;
+	struct wrr_rq *most_idle_wrr_rq, *most_busy_wrr_rq;
+	struct sched_wrr_entity *wrr_entity, *heaviest_entity_in_most_busy_wrr_rq;
+	struct list_head *curr;
+	struct list_head *head;
+	struct task_struct *task_to_be_moved;
+
+	int lowest_total_weight = INT_MAX;
+	int highest_total_weight = INT_MIN;
+	
+	int biggest_weight 
+	*/
+}
+
+
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return 0;	}
 static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags){}
 static void put_prev_task_wrr(struct rq *rq, struct task_struct *p){}
-static void set_curr_task_wrr(struct rq *rq){}
 static void task_fork_wrr(struct task_struct *p){}
 static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
 static void switched_to_wrr(struct rq *this_rq, struct task_struct *task){}
 static void prio_changed_wrr(struct rq *this_rq, struct task_struct *task, int oldprio){}
 static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
 {	return 0;	}
+
+/* task_fork_wrr, get_rr_interval_wrr, switched_to_wrr, put_prev_task_wrr
+   yield_task_wrr, load_balance_wrr probably have to be implemented
+*/
+
 
 const struct sched_class sched_wrr_class = 
 {
