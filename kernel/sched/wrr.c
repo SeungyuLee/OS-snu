@@ -126,33 +126,6 @@ static void yield_task_wrr(struct rq *rq)
 	/* needs to be implemented */
 }
 
-static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
-{
-	int curr_cpu = task_cpu(p);
-	int cpu;
-	int minimum_weight = INT_MAX;
-
-	if (p->nr_cpus_allowed == 1)
-		return curr_cpu;
-
-	if (sd_flag != SD_BALANCE_WAKE && sd_flag != SD_BALANCE_FORK)
-		return curr_cpu;
-
-	rcu_read_lock();
-	for_each_possible_cpu(cpu){
-		if (my_wrr_info.total_weight[cpu] < minimum_weight) {
-			minimum_weight = my_wrr_info.total_weight[cpu];
-			curr_cpu = cpu;
-		}
-
-
-	}
-
-	rcu_read_unlock();
-
-	return curr_cpu;
-}
-
 
 static struct task_struct *pick_next_task_wrr(struct rq *rq)
 {
@@ -161,6 +134,8 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 		next = _find_container(rq->wrr.queue.next);
 	return next;
 }
+
+
 
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
