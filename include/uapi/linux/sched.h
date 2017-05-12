@@ -48,7 +48,10 @@
 #define SCHED_WRR_DEFAULT_WEIGHT 	10
 #define	SCHED_WRR_MIN_WEIGHT 		1
 #define SCHED_WRR_MAX_WEIGHT 		20
+#define SCHED_WRR_TIME_QUANTUM		10
+#define SCHED_WRR_TICK_FACTOR		10
 
+#define SCHED_WRR_REBALANCE_TIME_PERIOD_NS	500000000
 
 /* Can be ORed in to make sure the process is reverted back to SCHED_NORMAL on fork */
 #define SCHED_RESET_ON_FORK     0x40000000
