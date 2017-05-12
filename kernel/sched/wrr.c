@@ -93,8 +93,21 @@ static void update_curr_wrr(struct rq *rq)
 static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 {
 	struct list_head *head;
-	struct sched_wrr_entity *wrr_entity = sched_wrr_entity_of_task(p);
-	struct wrr_rq *wrr_rq = sched_wrr_rq(rq);
+	struct sched_wrr_entity *wrr_entity;
+	struct wrr_rq *wrr_rq;
+	if (p == NULL) {
+		wrr_entity = NULL;
+	}
+	else {
+		wrr_entity = &p->wrr;
+	}
+	if (rq == NULL) {
+		wrr_rq = NULL;
+	}
+	else {
+		wrr_rq = &rq->wrr;
+	}
+
 	head = &wrr_rq->run_queue.run_list;
 
 	/* Check if the task is the only one in the run-queue.
@@ -171,7 +184,7 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 
 	next_entity = list_entry(head->next, struct sched_wrr_entity, run_list);
 
-	p = wrr_task_of(next_entity);
+	p = next_entity->task;
 
 	if (p == NULL)
 		return p;
@@ -192,7 +205,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 	/* Still to be tested  */
 		struct timespec now;
 
-		struct sched_wrr_entity *wrr_entity = &curr->wrr;
+		struct sched_wrr_entity *wrr_entity = &p->wrr;
 
 		getnstimeofday(&now);
 
@@ -211,13 +224,13 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 		* task on the queue (i.e. if there is more than 1 task) */
 		if (wrr_entity->run_list.prev != wrr_entity->run_list.next) {
 
-			requeue_task_wrr(rq, curr);
+			requeue_task_wrr(rq, p);
 			/* Set rescheduler for later since this function
 			* is called during a timer interrupt */
-			set_tsk_need_resched(curr);
+			set_tsk_need_resched(p);
 		} else {
 			/* No need for a requeue */
-			set_tsk_need_resched(curr);
+			set_tsk_need_resched(p);
 	}
 }
 
