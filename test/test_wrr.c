@@ -47,3 +47,5 @@ int main(int argc, char* argv[]) {
 		// need exit() ? 
 	}
 	*/
+	return 0;
+}
