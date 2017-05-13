@@ -9,6 +9,17 @@
 #define SYSCALL_SCHED_GETWEIGHT 381
 
 
+void fork_rec(int n, int weight){
+	if(n > 0){
+		fork();
+		fork_rec(n-1, weight);
+	}
+	
+	printf(" **** tester for WRR works **** \n\n");
+	printf(" --> set weight %d\n", weight);
+	syscall(SYSCALL_SCHED_SETWEIGHT, getpid(), weight);
+}
+
 int main(int argc, char* argv[]) {
 	int weight=0;
 	int fork=0;	
@@ -21,7 +32,10 @@ int main(int argc, char* argv[]) {
 	weight = atoi(argv[1]);
 	if( argc > 2)
 		fork = atoi(argv[2]);	
+	
+	fork_rec(fork, weight);
 
+	/*
 	while(fork>0){
 
 		pid = fork();
@@ -32,6 +46,4 @@ int main(int argc, char* argv[]) {
 		syscall(SYSCALL_SCHED_SETWEIGHT, pid, weight);
 		// need exit() ? 
 	}
-	
-	return 0;
-}
+	*/
