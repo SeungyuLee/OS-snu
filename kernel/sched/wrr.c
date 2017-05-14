@@ -32,7 +32,6 @@ static void init_wrr_rq(struct wrr_rq *wrr_rq)
 
 	spin_lock_init(&(wrr_rq->wrr_rq_lock));
 
-	/* Initialize the run queue list */
 	wrr_entity = &wrr_rq->run_queue;
 	INIT_LIST_HEAD(&wrr_entity->run_list);
 
@@ -51,19 +50,17 @@ static void init_task_wrr(struct task_struct *p)
 
 	wrr_entity = &p->wrr;
 	wrr_entity->task = p;
-	/* Use Default Parameters if the weight is still the default, * or weight is invalid */
 	if (wrr_entity->weight == SCHED_WRR_DEFAULT_WEIGHT ||								    !valid_weight(wrr_entity->weight)) {
 
 		wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
 
 		wrr_entity->time_slice = SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
 		wrr_entity->time_left =	wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
-	} else { /* Use the current weight value */
+	} else {
 		wrr_entity->time_slice = wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
 		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
 
 	}
-	/* Initialize the list head just to be safe */
 	INIT_LIST_HEAD(&wrr_entity->run_list);
 }
 
@@ -82,19 +79,17 @@ static void init_task_wrr(struct task_struct *p)
 
 	wrr_entity = &p->wrr;
 	wrr_entity->task = p;
-	/* Use Default Parameters if the weight is still the default, * or weight is invalid */
 	if (wrr_entity->weight == SCHED_WRR_DEFAULT_WEIGHT ||								    !valid_weight(wrr_entity->weight)) {
 
 		wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
 
 		wrr_entity->time_slice = SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
 		wrr_entity->time_left =	wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
-	} else { /* Use the current weight value */
+	} else { 
 		wrr_entity->time_slice = wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
 		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
 
 	}
-	/* Initialize the list head just to be safe */
 	INIT_LIST_HEAD(&wrr_entity->run_list);
 }
 
@@ -163,19 +158,13 @@ static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 
 	head = &wrr_rq->run_queue.run_list;
 
-	/* Check if the task is the only one in the run-queue.
-	* In this case, we won't need to re-queue it can just
-	* leave it as it is. */
 	if (wrr_rq->size == 1)
 		return;
 
 
 	spin_lock(&wrr_rq->wrr_rq_lock);
 
-	/* There is more than 1 task in queue, let's move this
-	* one to the back of the queue */
 	list_move_tail(&wrr_entity->run_list, head);
-
 
 	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
@@ -198,10 +187,7 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 		
 	update_curr_wrr(rq);
 	
-	/* Remove the task from the queue */
 	list_del(&wrr_entity->run_list);
-					
-	/* update statistics counts */
 	--wrr_rq->nr_running;
 	--wrr_rq->size;
 							
@@ -213,7 +199,7 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 
 static void yield_task_wrr(struct rq *rq)
 {
-	/* needs to be implemented */
+	requeue_task_wrr(rq, rq->curr);
 }
 
 
@@ -312,40 +298,52 @@ static void set_curr_task_wrr(struct rq *rq)
 
 static void load_balance_wrr(void)
 {
-	/*
-	int cpu;
-	int selected_cpu;
-	struct rq *rq, *rq_of_the_task, *rq_of_most_idle_wrr;
-	struct wrr_rq *wrr_rq;
-	struct wrr_rq *most_idle_wrr_rq, *most_busy_wrr_rq;
-	struct sched_wrr_entity *wrr_entity, *heaviest_entity_in_most_busy_wrr_rq;
-	struct list_head *curr;
-	struct list_head *head;
-	struct task_struct *task_to_be_moved;
-
-	int lowest_total_weight = INT_MAX;
-	int highest_total_weight = INT_MIN;
-	
-	int biggest_weight 
-	*/
+	/* this has to be implemented */
 }
 
+static void put_prev_task_wrr(struct rq *rq, struct task_struct *p)
+{
+	update_curr_wrr(rq);
+}
 
+static void task_fork_wrr(struct task_struct *p)
+{
+	struct sched_wrr_entity *wrr_entity;
+	if (p == NULL) return;
+	wrr_entity = &p->wrr;
+	wrr_entity->task = p;
+
+	wrr_entity->time_slice =
+			wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
+	wrr_entity->time_left = 
+			wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+}
+
+static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
+{
+	if (task == NULL)
+		return -EINVAL;
+	return task->wrr.weight * SCHED_WRR_TIME_QUANTUM / SCHED_WRR_TICK_FACTOR;
+}
+
+static void switched_to_wrr(struct rq *this_rq, struct task_struct *task)
+{
+	struct sched_wrr_entity *wrr_entity = &p->wrr;
+	wrr_entity->task = p;
+
+	wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
+	wrr_entity->time_slice =
+		SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
+	wrr_entity->time_left =
+		wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+
+}
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return 0;	}
 static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags){}
-static void put_prev_task_wrr(struct rq *rq, struct task_struct *p){}
-static void task_fork_wrr(struct task_struct *p){}
 static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
 static void switched_to_wrr(struct rq *this_rq, struct task_struct *task){}
 static void prio_changed_wrr(struct rq *this_rq, struct task_struct *task, int oldprio){}
-static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
-{	return 0;	}
-
-/* task_fork_wrr, get_rr_interval_wrr, switched_to_wrr, put_prev_task_wrr
-   yield_task_wrr, load_balance_wrr probably have to be implemented
-*/
-
 
 const struct sched_class wrr_sched_class = 
 {
