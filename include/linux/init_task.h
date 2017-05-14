@@ -175,6 +175,13 @@ extern struct task_group root_task_group;
 	.active_mm	= &init_mm,					\
 	.se		= {						\
 		.group_node 	= LIST_HEAD_INIT(tsk.se.group_node),	\
+	}, \
+	.wrr	= {						\
+		.run_list = LIST_HEAD_INIT(tsk.wrr.run_list),	\
+		.task = &tsk,				\
+		.weight = 10,				\
+		.time_slice = 100,			\
+		.time_left = 10,			\
 	},								\
 	.rt		= {						\
 		.run_list	= LIST_HEAD_INIT(tsk.rt.run_list),	\
