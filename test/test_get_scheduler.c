@@ -10,14 +10,12 @@
 #define SYSCALL_SCHED_SETWEIGHT 380
 #define SYSCALL_SCHED_GETWEIGHT 381
 
-
-
 int main(int argc, char* argv[]) {
 
 	pid_t pid;
-
-	pid = atoi(argv[0]);
-	printf("pid : %d scheduler : %d",pid,syscall(SYSCALL_SET_SCHEDULER,pid));
+	
+	pid = atoi(argv[1]);
+	printf("pid : %d scheduler : %ld", pid ,syscall(SYSCALL_GET_SCHEDULER,pid));
 
 	return 0;
 }
