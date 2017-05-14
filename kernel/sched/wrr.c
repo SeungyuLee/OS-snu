@@ -14,55 +14,6 @@ static void load_balance_wrr(void);
 static DEFINE_SPINLOCK(LOAD_BALANCE_LOCK);
 #endif
 
-static int valid_weight(unsigned int weight)
-{
-	if(weight >= SCHED_WRR_MIN_WEIGHT && weight <= SCHED_WRR_MAX_WEIGHT)
-		return 1;
-	else
-		return 0;
-}
-
-static void init_wrr_rq(struct wrr_rq *wrr_rq)
-{
-	struct sched_wrr_entity *wrr_entity;
-	wrr_rq->nr_running = 0;
-	wrr_rq->size = 0;
-	wrr_rq->curr = NULL;
-	wrr_rq->total_weight = 0;
-
-	spin_lock_init(&(wrr_rq->wrr_rq_lock));
-
-	wrr_entity = &wrr_rq->run_queue;
-	INIT_LIST_HEAD(&wrr_entity->run_list);
-
-	wrr_entity->task = NULL;
-	wrr_entity->weight = 0;
-	wrr_entity->time_slice = 0;
-	wrr_entity->time_left = 0;
-
-
-}
-
-static void init_task_wrr(struct task_struct *p)
-{
-	struct sched_wrr_entity *wrr_entity;
-	if (p == NULL)	return;
-
-	wrr_entity = &p->wrr;
-	wrr_entity->task = p;
-	if (wrr_entity->weight == SCHED_WRR_DEFAULT_WEIGHT ||								    !valid_weight(wrr_entity->weight)) {
-
-		wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
-
-		wrr_entity->time_slice = SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
-		wrr_entity->time_left =	wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
-	} else {
-		wrr_entity->time_slice = wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
-		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
-
-	}
-	INIT_LIST_HEAD(&wrr_entity->run_list);
-}
 
 static int valid_weight(unsigned int weight)
 {
@@ -328,8 +279,8 @@ static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
 
 static void switched_to_wrr(struct rq *this_rq, struct task_struct *task)
 {
-	struct sched_wrr_entity *wrr_entity = &p->wrr;
-	wrr_entity->task = p;
+	struct sched_wrr_entity *wrr_entity = &task->wrr;
+	wrr_entity->task = task;
 
 	wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
 	wrr_entity->time_slice =
@@ -342,7 +293,6 @@ static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt
 {	return 0;	}
 static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags){}
 static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
-static void switched_to_wrr(struct rq *this_rq, struct task_struct *task){}
 static void prio_changed_wrr(struct rq *this_rq, struct task_struct *task, int oldprio){}
 
 const struct sched_class wrr_sched_class = 
