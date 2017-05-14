@@ -225,13 +225,9 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 	struct list_head *head;
 	struct wrr_rq *wrr_rq =  &rq->wrr;
 
-	/* There are no runnable tasks */
 	if (rq->nr_running <= 0)
 		return NULL;
 
-	/* Pick the first element in the queue.
-	* The item will automatically be re-queued back, in task_tick
-	* funciton */
 	head_entity = &wrr_rq->run_queue;
 	head = &head_entity->run_list;
 
@@ -244,45 +240,30 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 
 	p->se.exec_start = rq->clock_task;
 
-	/* Recompute the time left + time slice value incase weight
-	* of task has been changed */
-
 	return p;
 }
 
-
-
-
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
-	/* Still to be tested  */
 		struct timespec now;
 
 		struct sched_wrr_entity *wrr_entity = &p->wrr;
 
 		getnstimeofday(&now);
 
-		/* Update the current run time statistics. */
 		update_curr_wrr(rq);
 
-		if (--wrr_entity->time_left) /* there is still time left */
+		if (--wrr_entity->time_left) 
 			return;
 
-		/* the time_slice is in milliseconds and we need to
-		* convert it to ticks units */
 		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
 
 
-		/* Requeue to the end of the queue if we are not the only
-		* task on the queue (i.e. if there is more than 1 task) */
 		if (wrr_entity->run_list.prev != wrr_entity->run_list.next) {
 
 			requeue_task_wrr(rq, p);
-			/* Set rescheduler for later since this function
-			* is called during a timer interrupt */
 			set_tsk_need_resched(p);
 		} else {
-			/* No need for a requeue */
 			set_tsk_need_resched(p);
 	}
 }
