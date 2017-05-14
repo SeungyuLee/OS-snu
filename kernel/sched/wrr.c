@@ -3,7 +3,7 @@
  * (mapped to the SCHED_WRR policy)
  */
 
-static const struct sched_class wrr_sched_class;
+const struct sched_class wrr_sched_class;
 
 #include "sched.h"
 #include <linux/slab.h>
@@ -298,7 +298,7 @@ static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int fla
 static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
 static void prio_changed_wrr(struct rq *this_rq, struct task_struct *task, int oldprio){}
 
-static const struct sched_class wrr_sched_class = 
+const struct sched_class wrr_sched_class = 
 {
 	.next			= &fair_sched_class,
 	.enqueue_task	= enqueue_task_wrr,
