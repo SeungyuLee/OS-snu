@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
 	to = atoi(argv[1]);
 	syscall(SYSCALL_SET_SCHEDULER,pid,to);
 	
-	print("change completed");
+	printf("change completed");
 
 	return 0;
 }

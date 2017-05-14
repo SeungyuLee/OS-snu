@@ -14,8 +14,8 @@
 
 int main(int argc, char* argv[]) {
 
-	while(true) {
-		print("*");
+	while(1) {
+		printf("*");
 		sleep(10);
 	}
 	return 0;
