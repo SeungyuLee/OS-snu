@@ -7,13 +7,6 @@
 
 static DEFINE_SPINLOCK(set_weight_lock);
 
-int valid_weight(unsigned int weight){
-	if(weight < SCHED_WRR_MIN_WEIGHT || weight > SCHED_WRR_MAX_WEIGHT)
-		return 0;
-	else
-		return 1;
-}
-
 bool check_same_owner(struct task_struct *p){
 	const struct cred *cred = current_cred(), *pcred;
 	bool match;
@@ -26,7 +19,7 @@ bool check_same_owner(struct task_struct *p){
 	return match;
 }
 
-asmlinkage int sched_setweight(pid_t pid, int weight){
+asmlinkage int sys_sched_setweight(pid_t pid, int weight){
 	struct task_struct *task = NULL;
 	struct pid *pid_struct = NULL;
 	struct rq *rq = NULL;
@@ -35,7 +28,7 @@ asmlinkage int sched_setweight(pid_t pid, int weight){
 
 	if (pid < 0)
 		return -EINVAL;
-	if (weight <0 || !valid_weight(weight))
+	if (weight < 1 || weight > 20)
 		return -EINVAL;
 
 	/* if pid is 0, use the calling process task */
@@ -90,7 +83,7 @@ asmlinkage int sched_setweight(pid_t pid, int weight){
 	return 0;
 }
 
-asmlinkage int sched_getweight(pid_t pid){
+asmlinkage int sys_sched_getweight(pid_t pid){
 	int result;
 	struct task_struct *task = NULL;
 	struct pid *pid_struct = NULL;

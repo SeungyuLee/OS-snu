@@ -90,13 +90,6 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
-struct wrr_info my_wrr_info = {
-	.num_cpus = 0,
-	.nr_running = {0},
-	.total_weight = {0},
-};
-raw_spinlock_t wrr_info_locks[MAX_CPUS];
-
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
 	unsigned long delta;
@@ -1644,8 +1637,6 @@ static void __sched_fork(struct task_struct *p)
 
 	INIT_LIST_HEAD(&p->rt.run_list);
 	INIT_LIST_HEAD(&p->wrr.run_list);
-	p->wrr.weight = 1; // need modify
-	p->wrr.time_slice = 10 * p->wrr.weight; 
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	INIT_HLIST_HEAD(&p->preempt_notifiers);
@@ -3676,7 +3667,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 
 	if (rt_prio(prio))
 		p->sched_class = &rt_sched_class;
-	else if (task_has_wrr_policy)
+	else if (task_has_wrr_policy(p))
 		p->sched_class = &wrr_sched_class;
 	else 
 		p->sched_class = &fair_sched_class;
@@ -7031,8 +7022,6 @@ void __init sched_init(void)
 	for_each_possible_cpu(i) {
 		struct rq *rq;
 		
-		my_wrr_info.num_cpus++;
-		raw_spin_lock_init(&wrr_info_locks[i]);
 		rq = cpu_rq(i);
 		raw_spin_lock_init(&rq->lock);
 		rq->nr_running = 0;
@@ -7040,7 +7029,7 @@ void __init sched_init(void)
 		rq->calc_load_update = jiffies + LOAD_FREQ;
 		init_cfs_rq(&rq->cfs);
 		init_rt_rq(&rq->rt, rq);
-		init_wrr_rq(&rq->wrr, rq);
+		init_wrr_rq(&rq->wrr);
 #ifdef CONFIG_FAIR_GROUP_SCHED
 		root_task_group.shares = ROOT_TASK_GROUP_LOAD;
 		INIT_LIST_HEAD(&rq->leaf_cfs_rq_list);

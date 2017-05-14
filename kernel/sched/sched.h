@@ -11,8 +11,6 @@
 #include "cpuacct.h"
 
 extern __read_mostly int scheduler_running;
-extern int wrr_boosted_weight;
-extern raw_spinlock_t wrr_info_locks[MAX_CPUS];
 
 /*
  * Convert user-nice values [ -20 ... 0 ... 19 ]
@@ -1352,7 +1350,7 @@ extern void print_rt_stats(struct seq_file *m, int cpu);
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq);
-extern void init_wrr_rq(struct wrr_rq *wrr_rq, struct rq *rq);
+extern void init_wrr_rq(struct wrr_rq *wrr_rq);
 extern void set_wrr_weight(int weight);
 
 extern void cfs_bandwidth_usage_inc(void);

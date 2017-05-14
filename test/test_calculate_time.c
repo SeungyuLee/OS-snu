@@ -12,18 +12,17 @@
 #define SYSCALL_SCHED_SETWEIGHT 380
 #define SYSCALL_SCHED_GETWEIGHT 381
 
-
-
 int main(int argc, char* argv[]) {
 
 	int weight = atoi(argv[1]);
 	struct sched_param param;
 	param.sched_priority = 0;
-	syscall(SYSCALL_SET_SCHEULER,getpid(),6,&param);
-	syscall(SYSCALL_SCHED_SETWEIGHT, getpid(), weight);
+	long int value1 =  syscall(SYSCALL_SET_SCHEDULER, getpid(), 6,&param);
+	long int value2 = syscall(SYSCALL_SCHED_SETWEIGHT, getpid(), weight);
+	printf("set scheduler: %ld, sched_setweight: %ld\n", value1, value2);
 	clock_t start = clock();
 	int i;
-	for(i=0;i<10000000;i++) {
+	for(i=0;i<1000000000;i++) {
 	}
 	clock_t end = clock();
 	float seconds = (float)(end - start) / CLOCKS_PER_SEC;

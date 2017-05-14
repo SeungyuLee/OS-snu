@@ -5,23 +5,33 @@
 
 #include "sched.h"
 #include <linux/slab.h>
-#define WRR_DEFAULT_TIMESLICE 10
-
-static DEFINE_SPINLOCK(SET_WEIGHT_LOCK);
+#define TIME_SLICE 10
+#define DEFAULT_WEIGHT 10
 
 #ifdef CONFIG_SMP
 static void load_balance_wrr(void);
 static DEFINE_SPINLOCK(LOAD_BALANCE_LOCK);
 #endif
 
-
-static int valid_weight(unsigned int weight)
+void init_wrr_rq(struct wrr_rq *wrr_rq)
 {
-	if(weight >= SCHED_WRR_MIN_WEIGHT && weight <= SCHED_WRR_MAX_WEIGHT)
-		return 1;
-	else
-		return 0;
+		struct sched_wrr_entity *wrr_entity;
+		wrr_rq->nr_running = 0;
+		wrr_rq->size = 0;
+		wrr_rq->curr = NULL;
+		wrr_rq->total_weight = 0;
+
+		spin_lock_init(&(wrr_rq->wrr_rq_lock));
+
+		wrr_entity = &wrr_rq->run_queue;
+		INIT_LIST_HEAD(&wrr_entity->run_list);
+
+		wrr_entity->task = NULL;
+		wrr_entity->weight = 0;
+		wrr_entity->time_slice = 0;
+		wrr_entity->time_left = 0;
 }
+
 
 static void init_task_wrr(struct task_struct *p)
 {
@@ -30,16 +40,14 @@ static void init_task_wrr(struct task_struct *p)
 
 	wrr_entity = &p->wrr;
 	wrr_entity->task = p;
-	if (wrr_entity->weight == SCHED_WRR_DEFAULT_WEIGHT ||								    !valid_weight(wrr_entity->weight)) {
-
-		wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
-
-		wrr_entity->time_slice = SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
-		wrr_entity->time_left =	wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+	int weight = wrr_entity->weight;
+	if (weight == DEFAULT_WEIGHT ||	weight < 1 || weight > 20)			 {
+		wrr_entity->weight = DEFAULT_WEIGHT;
+		wrr_entity->time_slice = DEFAULT_WEIGHT * TIME_SLICE;
+		wrr_entity->time_left =	wrr_entity->time_slice;
 	} else { 
-		wrr_entity->time_slice = wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
-		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
-
+		wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
+		wrr_entity->time_left = wrr_entity->time_slice;
 	}
 	INIT_LIST_HEAD(&wrr_entity->run_list);
 }
@@ -193,8 +201,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 		if (--wrr_entity->time_left) 
 			return;
 
-		wrr_entity->time_left = wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
-
+		wrr_entity->time_left = wrr_entity->time_slice;
 
 		if (wrr_entity->run_list.prev != wrr_entity->run_list.next) {
 
@@ -265,16 +272,16 @@ static void task_fork_wrr(struct task_struct *p)
 	wrr_entity->task = p;
 
 	wrr_entity->time_slice =
-			wrr_entity->weight * SCHED_WRR_TIME_QUANTUM;
+			wrr_entity->weight * TIME_SLICE;
 	wrr_entity->time_left = 
-			wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+			wrr_entity->time_slice;
 }
 
 static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
 {
 	if (task == NULL)
 		return -EINVAL;
-	return task->wrr.weight * SCHED_WRR_TIME_QUANTUM / SCHED_WRR_TICK_FACTOR;
+	return task->wrr.weight * TIME_SLICE;
 }
 
 static void switched_to_wrr(struct rq *this_rq, struct task_struct *task)
@@ -282,11 +289,11 @@ static void switched_to_wrr(struct rq *this_rq, struct task_struct *task)
 	struct sched_wrr_entity *wrr_entity = &task->wrr;
 	wrr_entity->task = task;
 
-	wrr_entity->weight = SCHED_WRR_DEFAULT_WEIGHT;
+	wrr_entity->weight = DEFAULT_WEIGHT;
 	wrr_entity->time_slice =
-		SCHED_WRR_DEFAULT_WEIGHT * SCHED_WRR_TIME_QUANTUM;
+		DEFAULT_WEIGHT * TIME_SLICE;
 	wrr_entity->time_left =
-		wrr_entity->time_slice / SCHED_WRR_TICK_FACTOR;
+		wrr_entity->time_slice;
 
 }
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
