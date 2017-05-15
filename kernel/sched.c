@@ -21,10 +21,10 @@ bool check_same_owner(struct task_struct *p){
 
 asmlinkage int sys_sched_setweight(pid_t pid, int weight)
 {
-	struct task_struct *task = NULL;
-	struct pid *pid_struct = NULL;
-	struct rq *rq = NULL;
-	struct wrr_rq *wrr_rq = NULL;
+	struct task_struct *task;
+	struct pid *pid_struct;
+	struct rq *rq;
+	struct wrr_rq *wrr_rq;
 	int old_weight;
 
 	if (pid < 0)
@@ -62,7 +62,8 @@ asmlinkage int sys_sched_setweight(pid_t pid, int weight)
 	}
 	else
 		task->wrr.weight = (unsigned int) weight;
-	
+
+	spin_lock(&set_weight_lock);
 	rq = task_rq(task);
 	
 	if( rq->curr == task || current == task)
@@ -72,8 +73,6 @@ asmlinkage int sys_sched_setweight(pid_t pid, int weight)
 		task->wrr.time_left = task->wrr.time_slice;
 	}
 	
-	spin_lock(&set_weight_lock);
-
 	wrr_rq = &rq->wrr;
 	wrr_rq->total_weight -= old_weight;
 	wrr_rq->total_weight += weight;
@@ -85,26 +84,23 @@ asmlinkage int sys_sched_setweight(pid_t pid, int weight)
 }
 
 asmlinkage int sys_sched_getweight(pid_t pid){
-	int result;
+	
 	struct task_struct *task = NULL;
 	struct pid *pid_struct = NULL;
 
 	if (pid < 0)
 		return -EINVAL;
 
-	if (pid == 0)
-		result = current->wrr.weight;
-	else {
-		pid_struct = find_get_pid(pid);
-		if(pid_struct == NULL)
-			return -EINVAL;
+	else if (pid == 0)
+		return current->wrr.weight;
+	
+	pid_struct = find_get_pid(pid);
+	if(pid_struct == NULL)
+		return -EINVAL;
 		
-		task = get_pid_task(pid_struct, PIDTYPE_PID);
-		if(task == NULL)
-			return -EINVAL;
+	task = get_pid_task(pid_struct, PIDTYPE_PID);
+	if(task == NULL)
+		return -EINVAL;
 
-		result = task->wrr.weight;
-	}
-
-	return result;	
+	return task->wrr.weight;
 }

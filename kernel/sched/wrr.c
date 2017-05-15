@@ -37,6 +37,7 @@ void init_wrr_rq(struct wrr_rq *wrr_rq)
 static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct wrr_rq *wrr_rq = &rq->wrr;
+	if (NULL == p) return;
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	
 	if (NULL == wrr_entity) return;
@@ -55,6 +56,7 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 
 static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 {
+	if (NULL == p) return;
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	struct wrr_rq *wrr_rq = &rq->wrr;
 	if (NULL == wrr_entity) {
@@ -68,6 +70,8 @@ static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 
 static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 {
+	if (NULL == p) return;
+	
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	struct wrr_rq *wrr_rq = &rq->wrr;
 	
@@ -108,6 +112,7 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
+	if (NULL == p) return;
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	
 	if (NULL == wrr_entity) return;
@@ -180,6 +185,7 @@ static void put_prev_task_wrr(struct rq *rq, struct task_struct *p)
 
 static void task_fork_wrr(struct task_struct *p)
 {
+	if (NULL == p) return;
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	if (NULL == wrr_entity) return;
 
@@ -243,3 +249,19 @@ const struct sched_class wrr_sched_class =
 	.get_rr_interval= get_rr_interval_wrr,
 };
 
+#ifdef CONFIG_SCHED_DEBUG
+
+extern void print_wrr_rq(struct seq_file *m, int cpu, struct wrr_rq *wrr_rq);
+
+void print_wrr_stats(struct seq_file *m, int cpu)
+{
+	wrr_rq_iter_t iter;
+	struct wrr_rq *wrr_rq;
+
+	rcu_read_lock();
+	for_each_wrr_rq(wrr_rq, iter, cpu_rq(cpu))
+		print_wrr_rq(m, cpu, wrr_rq);
+	rcu_read_unlock(0;
+}
+
+#endif
