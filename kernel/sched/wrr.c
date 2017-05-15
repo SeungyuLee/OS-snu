@@ -43,8 +43,7 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 
 	spin_lock(&wrr_rq->wrr_rq_lock);
 	
-	struct list_head *head = &wrr_entity->run_list;
-	list_add_tail(&wrr_entity->run_list, &wrr_rq->run_queue->run_list);
+	list_add_tail(&wrr_entity->run_list, &wrr_rq->run_queue.run_list);
 
 	++wrr_rq->nr_running; // 무쓸모?
 	inc_nr_running(rq);
@@ -63,7 +62,7 @@ static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 	}
 
 	spin_lock(&wrr_rq->wrr_rq_lock);
-	list_move_tail(&wrr_entity->run_list, &wrr_rq->run_queue->run_list);
+	list_move_tail(&wrr_entity->run_list, &wrr_rq->run_queue.run_list);
 	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
 
@@ -97,10 +96,10 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 	struct sched_wrr_entity *next_entity = NULL;
 	struct wrr_rq *wrr_rq =  &rq->wrr;
 
-	if (list_empty(&wrr_rq->run_queue->run_list))
+	if (list_empty(&wrr_rq->run_queue.run_list))
 		return NULL;
 
-	next_entity = list_entry(wrr_rq->run_queue->run_list.next, struct sched_wrr_entity, run_list);
+	next_entity = list_entry(wrr_rq->run_queue.run_list.next, struct sched_wrr_entity, run_list);
 
 	p = next_entity->task;
 
