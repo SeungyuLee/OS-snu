@@ -38,9 +38,9 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		
 	: change weight value of process.
 		   
-		* system call number is 380.
-		* change calling process's weight when pid = 0.
-		* Only a user who is a root user or has a process should be able to change the weight using `sched_setweight` system call.
+	* system call number is 380.
+	* change calling process's weight when pid = 0.
+	* Only a user who is a root user or has a process should be able to change the weight using `sched_setweight` system call.
 	
 	- get weight systemcall
 		
@@ -50,9 +50,9 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		
 	: return weight value of process.
 			
-		* system call number is 381.
-		* return calling process's weight when pid = 0.
-		* Any user can call `sched_getweight` system call.
+	* system call number is 381.
+	* return calling process's weight when pid = 0.
+	* Any user can call `sched_getweight` system call.
 	
 	
 4. test program in`test/trial.c`
