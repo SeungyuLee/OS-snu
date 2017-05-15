@@ -115,7 +115,7 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 	}
 	wrr_entity->time_legt = wrr_entity->timeslice;
 	rqueue_task_wrr(rq,p);
-	wrr_entity = list_entry(wrr_rq->runqueue.runlist.next, struct sched_wrr_entity, run_list);
+	wrr_entity = list_entry(wrr_rq->run_queue.runlist.next, struct sched_wrr_entity, run_list);
 	wrr_entity->time_left = wrr_entity->time_slice;
 	p = wrr_task_of(wrr_entity);
 
