@@ -3,6 +3,8 @@
  * (mapped to the SCHED_WRR policy)
  */
 
+const struct sched_class wrr_sched_class;
+
 #include "sched.h"
 #include <linux/slab.h>
 #define TIME_SLICE 10
@@ -41,7 +43,7 @@ static void init_task_wrr(struct task_struct *p)
 	wrr_entity = &p->wrr;
 	wrr_entity->task = p;
 	int weight = wrr_entity->weight;
-	if (weight == DEFAULT_WEIGHT ||	weight < 1 || weight > 20)			 {
+	if (weight == DEFAULT_WEIGHT ||	weight < 1 || weight > 20)	{
 		wrr_entity->weight = DEFAULT_WEIGHT;
 		wrr_entity->time_slice = DEFAULT_WEIGHT * TIME_SLICE;
 		wrr_entity->time_left =	wrr_entity->time_slice;
@@ -49,6 +51,7 @@ static void init_task_wrr(struct task_struct *p)
 		wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
 		wrr_entity->time_left = wrr_entity->time_slice;
 	}
+
 	INIT_LIST_HEAD(&wrr_entity->run_list);
 }
 
@@ -120,11 +123,8 @@ static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 	if (wrr_rq->size == 1)
 		return;
 
-
 	spin_lock(&wrr_rq->wrr_rq_lock);
-
 	list_move_tail(&wrr_entity->run_list, head);
-
 	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
 
@@ -139,7 +139,6 @@ static struct wrr_rq *wrr_rq_of_wrr_entity(struct sched_wrr_entity *wrr_entity)
 static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 {
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
-
 	struct wrr_rq *wrr_rq = wrr_rq_of_wrr_entity(wrr_entity);
 	
 	spin_lock(&wrr_rq->wrr_rq_lock);
@@ -153,7 +152,6 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	wrr_rq->total_weight -= wrr_entity->weight;
 								
 	spin_unlock(&wrr_rq->wrr_rq_lock);
-
 }
 
 static void yield_task_wrr(struct rq *rq)
@@ -190,31 +188,28 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
-		struct timespec now;
-
 		struct sched_wrr_entity *wrr_entity = &p->wrr;
 
-		getnstimeofday(&now);
-
 		update_curr_wrr(rq);
+printk(KERN_DEBUG "TASK_TICK_INFO cpu number %d task pid %d is ticking %d", task_cpu(p), task_pid_nr(current), wrr_entity->time_left);
 
-		if (--wrr_entity->time_left) 
-			return;
+
+		if (--wrr_entity->time_left) return;
 
 		wrr_entity->time_left = wrr_entity->time_slice;
 
 		if (wrr_entity->run_list.prev != wrr_entity->run_list.next) {
-
 			requeue_task_wrr(rq, p);
 			set_tsk_need_resched(p);
 		} else {
 			set_tsk_need_resched(p);
 	}
+
 }
 
 
 static int most_idle_cpu(void)
-{	// counter needed?
+{	
 	int cpu, total_weight;
 	int idle_cpu = -1;
 	int lowest_total_weight = INT_MAX;
@@ -234,7 +229,6 @@ static int most_idle_cpu(void)
 
 	return idle_cpu;
 }
-
 
 static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
 {
@@ -288,14 +282,16 @@ static void switched_to_wrr(struct rq *this_rq, struct task_struct *task)
 {
 	struct sched_wrr_entity *wrr_entity = &task->wrr;
 	wrr_entity->task = task;
-
 	wrr_entity->weight = DEFAULT_WEIGHT;
-	wrr_entity->time_slice =
-		DEFAULT_WEIGHT * TIME_SLICE;
-	wrr_entity->time_left =
-		wrr_entity->time_slice;
-
+	wrr_entity->time_slice = DEFAULT_WEIGHT * TIME_SLICE;
+	wrr_entity->time_left = wrr_entity->time_slice;
 }
+
+static void rq_online_wrr(struct rq *rq){}
+static void rq_offline_wrr(struct rq *rq){}
+static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){}
+static void post_schedule_wrr(struct rq *rq){}
+static void task_woken_wrr(struct rq *rq, struct task_struct *p){}
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return 0;	}
 static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags){}
@@ -308,17 +304,22 @@ const struct sched_class wrr_sched_class =
 	.enqueue_task	= enqueue_task_wrr,
 	.dequeue_task	= dequeue_task_wrr,
 	.yield_task		= yield_task_wrr,	
-	.yield_to_task	= yield_to_task_wrr,
+//	.yield_to_task	= yield_to_task_wrr,
 	.check_preempt_curr	= check_preempt_curr_wrr,
 	.pick_next_task = pick_next_task_wrr,
 	.put_prev_task 	= put_prev_task_wrr,
 #ifdef CONFIG_SMP
 	.select_task_rq	= select_task_rq_wrr,
+	.rq_online		= rq_online_wrr,
+	.rq_offline		= rq_offline_wrr,
+	.pre_schedule	= pre_schedule_wrr,
+	.post_schedule	= post_schedule_wrr,
+	.task_woken		= task_woken_wrr,
+	.switched_from	= switched_from_wrr,
 #endif
 	.set_curr_task 	= set_curr_task_wrr,
 	.task_tick 		= task_tick_wrr,
-	.task_fork		= task_fork_wrr,
-	.switched_from	= switched_from_wrr,
+//	.task_fork		= task_fork_wrr,
 	.switched_to	= switched_to_wrr,
 	.prio_changed	= prio_changed_wrr,
 	.get_rr_interval= get_rr_interval_wrr,
