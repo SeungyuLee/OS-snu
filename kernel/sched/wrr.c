@@ -15,6 +15,10 @@ static void load_balance_wrr(void);
 static DEFINE_SPINLOCK(LOAD_BALANCE_LOCK);
 #endif
 
+static inline struct task_struct *wrr_task_of(struct sched_wrr_entity *wrr_entity) {
+	return container_of(wrr_entity, struct task_struct, wrr);
+}
+
 void init_wrr_rq(struct wrr_rq *wrr_rq)
 {
 		struct sched_wrr_entity *wrr_entity;
@@ -42,7 +46,7 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	
 	if (NULL == wrr_entity) return;
 
-	spin_lock(&wrr_rq->wrr_rq_lock);
+//	spin_lock(&wrr_rq->wrr_rq_lock);
 	
 	list_add_tail(&wrr_entity->run_list, &wrr_rq->run_queue.run_list);
 
@@ -51,7 +55,7 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	++wrr_rq->size; // 무쓸모
 	wrr_rq->total_weight += wrr_entity->weight;
 	
-	spin_unlock(&wrr_rq->wrr_rq_lock);
+//	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
 
 static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
@@ -63,9 +67,9 @@ static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 		return;
 	}
 
-	spin_lock(&wrr_rq->wrr_rq_lock);
+//	spin_lock(&wrr_rq->wrr_rq_lock);
 	list_move_tail(&wrr_entity->run_list, &wrr_rq->run_queue.run_list);
-	spin_unlock(&wrr_rq->wrr_rq_lock);
+//	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
 
 static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
@@ -77,15 +81,15 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	
 	if (NULL == wrr_entity) return;
 
-	spin_lock(&wrr_rq->wrr_rq_lock);
+//	spin_lock(&wrr_rq->wrr_rq_lock);
 	
-	list_del_init(&wrr_entity->run_list);
+	list_del(&wrr_entity->run_list);
 	--wrr_rq->nr_running;
 	dec_nr_running(rq);
 	--wrr_rq->size; // 무쓸모						
 	wrr_rq->total_weight -= wrr_entity->weight;
 								
-	spin_unlock(&wrr_rq->wrr_rq_lock);
+//	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
 
 static void yield_task_wrr(struct rq *rq)
@@ -97,15 +101,23 @@ static void yield_task_wrr(struct rq *rq)
 static struct task_struct *pick_next_task_wrr(struct rq *rq)
 {
 	struct task_struct *p;
+	struct wrr_rq *wrr_rq = &rq->wrr;
 	struct sched_wrr_entity *next_entity = NULL;
-	struct wrr_rq *wrr_rq =  &rq->wrr;
+	struct sched_wrr_entity *current_entity = &rq->curr->wrr;
 
 	if (list_empty(&wrr_rq->run_queue.run_list))
 		return NULL;
 
 	next_entity = list_entry(wrr_rq->run_queue.run_list.next, struct sched_wrr_entity, run_list);
 
-	p = next_entity->task;
+	if((long)wrr_entity->time_left > 0 && curr_entity != wrr_entity) {
+		return wrr_task_of(wrr_entity);
+	}
+	wrr_entity->time_legt = wrr_entity->timeslice;
+	rqueue_task_wrr(rq,p);
+	wrr_entity = list_entry(wrr_rq->runqueue.runlist.next, struct sched_wrr_entity, run_list);
+	wrr_entity->time_left = wrr_entity->time_slice;
+	p = wrr_task_of(wrr_entity);
 
 	return p;
 }
@@ -243,7 +255,7 @@ const struct sched_class wrr_sched_class =
 #endif
 	.set_curr_task 	= set_curr_task_wrr,
 	.task_tick 		= task_tick_wrr,
-//	.task_fork		= task_fork_wrr,
+	.task_fork		= task_fork_wrr,
 	.switched_to	= switched_to_wrr,
 	.prio_changed	= prio_changed_wrr,
 	.get_rr_interval= get_rr_interval_wrr,
