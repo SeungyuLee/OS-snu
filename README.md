@@ -36,7 +36,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		int sched_setweight(pid_t pid, int weight);
 		```
 		
-		   : change weight value of process.
+	: change weight value of process.
 		   
 		* system call number is 380.
 		* change calling process's weight when pid = 0.
@@ -48,7 +48,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		int sched_getweight(pid_t pid);
 		```
 		
-		   : return weight value of process.
+	: return weight value of process.
 			
 		* system call number is 381.
 		* return calling process's weight when pid = 0.
@@ -84,13 +84,14 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 ### 3. Load Balancing 
 
 - work only when two or more CPUs are activated.
+
 - Algorithm
-	1. If there are two or more run queues, select the largest weight sum (RQ_MAX) and the smallest weight (RQ_MIN).
-        2. SUM_WEIGHT (RQ_MAX) - When SUM_WEIGHT (RQ_MIN) = DIFF, select the task with the highest weight among the weights with a weight less than DIFF
-       		- However, except for the task that is in the running state, select the task among the maximum weight.
-       		- If there is no task satisfying the condition, terminate it.
-       
-	3. Move the task from RQ_MAX to RQ_MIN.
+
+1. If there are two or more run queues, select the largest weight sum (RQ_MAX) and the smallest weight (RQ_MIN).
+2. SUM_WEIGHT (RQ_MAX) - When SUM_WEIGHT (RQ_MIN) = DIFF, select the task with the highest weight among the weights with a weight less than DIFF
+	- However, except for the task that is in the running state, select the task among the maximum weight.
+	- If there is no task satisfying the condition, terminate it.
+3. Move the task from RQ_MAX to RQ_MIN.
 
 
 ### 4. How to build and run
