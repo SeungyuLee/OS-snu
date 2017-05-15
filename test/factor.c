@@ -76,7 +76,7 @@ int main(int argc, const char *argv[]){
 
 	//scheduler information
 	printf("current scheduler is %d\n", syscall(SYSCALL_GET_SCHEDULER, pid));
-	result = sched_setscheduler(pid, SCHED_WRR, &param);
+	result = sched_setscheduler(pid, 6, &param);
 	if(result == 0)
 		printf("sched_setscheduler success\n");
 	printf("current scheduler is %d\n", syscall(SYSCALL_GET_SCHEDULER, pid));
