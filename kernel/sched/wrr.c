@@ -11,25 +11,12 @@ const struct sched_class wrr_sched_class;
 #define DEFAULT_WEIGHT 10
 
 #ifdef CONFIG_SMP
-static void load_balance_wrr(void);
 static DEFINE_SPINLOCK(LOAD_BALANCE_LOCK);
+static unsigned long wrr_next_balance;
 #endif
 
 static inline struct task_struct *wrr_task_of(struct sched_wrr_entity *wrr_entity) {
 	return container_of(wrr_entity, struct task_struct, wrr);
-}
-typedef struct task_group *wrr_rq_iter_t;
-
-static inline struct task_group *next_task_group(struct task_group *tg)
-{
-	do {
-		tg = list_entry_rcu(tg->list.next, typeof(struct task_group), list);
-	} while (&tg->list != &task_groups && task_group_is_autogroup(tg));
-
-	if (&tg->list == &task_groups)
-		tg = NULL;
-
-	return tg;
 }
 
 #define for_each_wrr_rq(wrr_rq, iter, rq)	\
@@ -160,6 +147,164 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 
 }
 
+static void set_curr_task_wrr(struct rq *rq)
+{
+	struct task_struct *p = rq->curr;
+
+	p->se.exec_start = rq->clock_task;
+
+	rq->wrr.curr = &p->wrr;
+}
+
+static void load_balance_wrr(void)
+{
+	/* this has to be implemented */
+}
+
+static void put_prev_task_wrr(struct rq *rq, struct task_struct *p)
+{
+//	update_curr_wrr(rq);
+}
+
+static void task_fork_wrr(struct task_struct *p)
+{
+	if (NULL == p) return;
+	struct sched_wrr_entity *wrr_entity = &p->wrr;
+	if (NULL == wrr_entity) return;
+
+	wrr_entity->time_slice =
+			wrr_entity->weight * TIME_SLICE;
+	wrr_entity->time_left = 
+			wrr_entity->time_slice;
+}
+
+#ifdef CONFIG_SMP
+
+typedef struct task_group *wrr_rq_iter_t;
+
+static inline struct task_group *next_task_group(struct task_group *tg)
+{
+	do {
+		tg = list_entry_rcu(tg->list.next, typeof(struct task_group), list);
+	} while (&tg->list != &task_groups && task_group_is_autogroup(tg));
+
+	if (&tg->list == &task_groups)
+		tg = NULL;
+
+	return tg;
+}
+
+static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *p)
+{
+	return p->wrr.weight * TIME_SLICE;
+}
+
+static int find_cpu(int flag) {
+
+	int cpu, min_weight, max_weight, res_cpu = -1;
+	min_weight = 0;
+	max_weight = 99999999;
+
+	rcu_read_lock();
+	for_each_online_cpu(cpu) {
+		struct rq *rq = cpu_rq(cpu);
+		struct wrr_rq *wrr_rq = &rq->wrr;
+
+		if(flag == 0) {
+			if (wrr_rq->total_weight >= min_weight) {
+				min_weight = wrr_rq->total_weight;
+				res_cpu = cpu;
+			}
+		}
+
+		else {
+			if (wrr_rq->total_weight < max_weight) {
+				max_weight = wrr_rq->total_weight;
+				res_cpu = cpu;
+			}
+		}
+	}
+	rcu_read_unlock();
+
+	return res_cpu;
+}
+
+struct task_struct* migration_available_task(struct rq *rq, int diff) {
+
+	 struct sched_wrr_entity * entity;
+	 struct task_struct * selected;
+	 struct task_struct * max_weight_task = NULL;
+	 struct wrr_rq *wrr_rq = &rq->wrr;
+	 int max_weight = 0;
+
+	 raw_spin_lock(&wrr_rq->wrr_runtime_lock);
+	 list_for_each_entry (entity, &wrr_rq->head.run_list, run_list) {
+
+		selected = wrr_task_of(entity);
+
+	 	if(task_running(rq, selected) == 1)
+	 		continue;
+
+	 	if(entity->weight >= diff)
+	 		continue;
+
+	 	if(entity->weight >= max_weight) {
+	 	    max_weight = entity->weight;
+            max_weight_task = selected;
+        }
+	}
+	raw_spin_unlock(&wrr_rq->wrr_runtime_lock);
+
+	return max_weight_task;
+}
+
+
+void wrr_rq_load_balance() {
+
+	unsigned int RQ_MIN_cpu, RQ_MAX_cpu;
+	struct rq *max_rq;
+	struct rq *min_rq;
+	struct wrr_rq *wrr_max_rq;
+	struct wrr_rq *wrr_min_rq;
+	struct task_struct *migration_task;
+	int flags;
+	RQ_MIN_cpu = find_cpu(0);
+	RQ_MAX_cpu = find_cpu(1);
+
+
+	printk("wrr_rq_load_balance is called in cpu[%d]", smp_processor_id());
+	
+
+	if(RQ_MIN_cpu == RQ_MAX_cpu || RQ_MIN_cpu == -1 || RQ_MAX_cpu == -1) {
+		printk("RQ_MIN_cpu : %d", RQ_MIN_cpu);
+		printk("RQ_MAX_cpu : %d", RQ_MAX_cpu);
+		return;
+	}
+
+	else {
+		max_rq = cpu_rq(RQ_MAX_cpu);
+		min_rq = cpu_rq(RQ_MIN_cpu);
+		wrr_max_rq = &max_rq->wrr;
+		wrr_min_rq = &min_rq->wrr;
+		int diff = wrr_max_rq->total_weight - wrr_min_rq->total_weight;
+		printk("max_weight is : %d", wrr_max_rq->total_weight);
+		printk("min_weight is : %d", wrr_min_rq->total_weight);
+		
+		migration_task = migration_available_task(max_rq, diff);
+		
+		
+		if (migration_task != NULL) {
+			local_irq_save(flags);
+			double_rq_lock(max_rq, min_rq);
+			deactivate_task(max_rq, migration_task, 0);
+			set_task_cpu(migration_task, RQ_MIN_cpu);
+			activate_task(min_rq, migration_task, 0);
+			double_rq_unlock(max_rq, min_rq);
+			local_irq_restore(flags);
+		}
+
+	}
+}
 
 static int most_idle_cpu(void)
 {	
@@ -192,41 +337,15 @@ static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
 	return cpu;
 }
 
-static void set_curr_task_wrr(struct rq *rq)
-{
-	struct task_struct *p = rq->curr;
 
-	p->se.exec_start = rq->clock_task;
+static void rq_online_wrr(struct rq *rq){}
+static void rq_offline_wrr(struct rq *rq){}
+static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){}
+static void post_schedule_wrr(struct rq *rq){}
+static void task_woken_wrr(struct rq *rq, struct task_struct *p){}
+static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
 
-	rq->wrr.curr = &p->wrr;
-}
-
-static void load_balance_wrr(void)
-{
-	/* this has to be implemented */
-}
-
-static void put_prev_task_wrr(struct rq *rq, struct task_struct *p)
-{
-//	update_curr_wrr(rq);
-}
-
-static void task_fork_wrr(struct task_struct *p)
-{
-	if (NULL == p) return;
-	struct sched_wrr_entity *wrr_entity = &p->wrr;
-	if (NULL == wrr_entity) return;
-
-	wrr_entity->time_slice =
-			wrr_entity->weight * TIME_SLICE;
-	wrr_entity->time_left = 
-			wrr_entity->time_slice;
-}
-
-static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *p)
-{
-	return p->wrr.weight * TIME_SLICE;
-}
+#endif
 
 static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags) {}
 
@@ -239,15 +358,8 @@ static void switched_to_wrr(struct rq *rq, struct task_struct *p)
 	
 	check_preempt_curr_wrr(rq,p,0);
 }
-
-static void rq_online_wrr(struct rq *rq){}
-static void rq_offline_wrr(struct rq *rq){}
-static void pre_schedule_wrr(struct rq *rq, struct task_struct *prev){}
-static void post_schedule_wrr(struct rq *rq){}
-static void task_woken_wrr(struct rq *rq, struct task_struct *p){}
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return true;	}
-static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
 static void prio_changed_wrr(struct rq *this_rq, struct task_struct *task, int oldprio){}
 
 const struct sched_class wrr_sched_class = 
