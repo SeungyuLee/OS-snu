@@ -70,12 +70,11 @@ asmlinkage int sys_sched_setweight(pid_t pid, int weight)
 		task->wrr.time_slice = task->wrr.weight * 10;
 	else {
 		task->wrr.time_slice = task->wrr.weight * 10;
-		task->wrr.time_left = task->wrr.time_slice;
 	}
 	
 	wrr_rq = &rq->wrr;
-	wrr_rq->total_weight -= old_weight;
-	wrr_rq->total_weight += weight;
+	wrr_rq->wrr_total_weight -= old_weight;
+	wrr_rq->wrr_total_weight += weight;
 	
 	spin_unlock(&set_weight_lock);
 

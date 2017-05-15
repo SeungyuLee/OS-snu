@@ -31,13 +31,18 @@ static double get_end_time(){
 	return diff.tv_sec + (diff.tv_usec / pow(10,6));
 }
 
-void primeFactor(int num){
-	int init = num;
-	int factor = 2;
-	int cnt = 1;
-	long A[100] = {1,0,};
+void primeFactor(long long num){
+	long long init = num;
+	long long factor = 2;
+	long long cnt = 1;
+	long long A[100] = {1,0,};
 
 	while(num != 1){
+		if(factor * factor >num) {
+			A[cnt] = num;
+			cnt++;
+			break;
+		}
 		if(num % factor == 0){
 			A[cnt] = factor;
 			cnt++;
@@ -47,10 +52,10 @@ void primeFactor(int num){
 			factor++;
 	}
 
-	printf("%d = ", init);
+	printf("%lld = ", init);
 	for(int j=1; j<cnt-1; j++)
-		printf("%ld * ", A[j]);
-	printf("%ld\n", A[cnt-1]);
+		printf("%lld * ", A[j]);
+	printf("%lld\n", A[cnt-1]);
 	
 	return;
 }
@@ -75,11 +80,11 @@ int main(int argc, const char *argv[]){
 	int result;
 
 	//scheduler information
-	printf("current scheduler is %d\n", syscall(SYSCALL_GET_SCHEDULER, pid));
+	printf("current scheduler is %ld\n", syscall(SYSCALL_GET_SCHEDULER, pid));
 	result = sched_setscheduler(pid, 6, &param);
 	if(result == 0)
 		printf("sched_setscheduler success\n");
-	printf("current scheduler is %d\n", syscall(SYSCALL_GET_SCHEDULER, pid));
+	printf("current scheduler is %ld\n", syscall(SYSCALL_GET_SCHEDULER, pid));
 
 	//factorization with weight
 	for(processes = 1; processes <= 20; processes++ ){

@@ -3,10 +3,10 @@
 
 int main(void)
 {
-	int i = 0;
+	fork();
+	fork();
+	fork();
 	while(1){
-//		printf("hello i am simple program: %d\n", i++);
 	}
-
 	return 0;
 }

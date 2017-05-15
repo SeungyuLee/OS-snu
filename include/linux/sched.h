@@ -1040,7 +1040,6 @@ struct sched_wrr_entity {
 	struct task_struct *task;
 	unsigned int weight;
 	unsigned int time_slice;
-	unsigned int time_left;
 };
 
 struct sched_rt_entity {

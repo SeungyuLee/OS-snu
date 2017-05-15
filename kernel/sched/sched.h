@@ -342,12 +342,12 @@ static inline int rt_bandwidth_enabled(void)
 
 /* Weighted-Round-Robin classes' related filed in a runqueue: */
 struct wrr_rq {
-	unsigned int total_weight;
-	unsigned int nr_running;
-	unsigned int size;
-	spinlock_t wrr_rq_lock;
-	struct sched_wrr_entity *curr;
-	struct sched_wrr_entity run_queue;
+	unsigned int wrr_total_weight;
+	unsigned int wrr_nr_running;
+	unsigned int wrr_size;
+	raw_spinlock_t wrr_rq_lock;
+	struct task_struct *curr;
+	struct list_head run_queue;
 };
 
 /* Real-Time classes' related field in a runqueue: */
@@ -1349,6 +1349,7 @@ extern struct sched_entity *__pick_first_entity(struct cfs_rq *cfs_rq);
 extern struct sched_entity *__pick_last_entity(struct cfs_rq *cfs_rq);
 extern void print_cfs_stats(struct seq_file *m, int cpu);
 extern void print_rt_stats(struct seq_file *m, int cpu);
+extern void print_wrr_stats(struct seq_file *m, int cpu);
 
 extern void init_cfs_rq(struct cfs_rq *cfs_rq);
 extern void init_rt_rq(struct rt_rq *rt_rq, struct rq *rq);

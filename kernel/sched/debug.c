@@ -249,9 +249,9 @@ void print_wrr_rq(struct seq_file *m, int cpu, struct wrr_rq *wrr_rq)
 #define P(x) \
 	SEQ_printf(m, "  .%-30s: %Ld\n", #x, (long long)(wrr_rq->x))
 
-	P(nr_running);
-	P(total_weight);
-	P(size);
+	P(wrr_nr_running);
+	P(wrr_total_weight);
+	P(wrr_size);
 #undef P
 }
 
@@ -344,6 +344,7 @@ do {									\
 	spin_lock_irqsave(&sched_debug_lock, flags);
 	print_cfs_stats(m, cpu);
 	print_rt_stats(m, cpu);
+	print_wrr_stats(m, cpu);
 
 	rcu_read_lock();
 	print_rq(m, rq, cpu);
