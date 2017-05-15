@@ -118,22 +118,22 @@ static void yield_task_wrr(struct rq *rq)
 
 static struct task_struct *pick_next_task_wrr(struct rq *rq)
 {
-	struct task_struct *p;
+	struct task_struct *p = NULL;
 	struct wrr_rq *wrr_rq = &rq->wrr;
-	struct sched_wrr_entity *next_entity = NULL;
+	struct sched_wrr_entity *wrr_entity = NULL;
 	struct sched_wrr_entity *current_entity = &rq->curr->wrr;
 
 	if (list_empty(&wrr_rq->run_queue.run_list))
 		return NULL;
 
-	next_entity = list_entry(wrr_rq->run_queue.run_list.next, struct sched_wrr_entity, run_list);
+	wrr_entity = list_entry(wrr_rq->run_queue.run_list.next, struct sched_wrr_entity, run_list);
 
-	if((long)wrr_entity->time_left > 0 && curr_entity != wrr_entity) {
+	if(wrr_entity->time_left > 0 && current_entity != wrr_entity) {
 		return wrr_task_of(wrr_entity);
 	}
-	wrr_entity->time_legt = wrr_entity->timeslice;
-	rqueue_task_wrr(rq,p);
-	wrr_entity = list_entry(wrr_rq->run_queue.runlist.next, struct sched_wrr_entity, run_list);
+	wrr_entity->time_left = wrr_entity->time_slice;
+	requeue_task_wrr(rq, p);
+	wrr_entity = list_entry(wrr_rq->run_queue.run_list.next, struct sched_wrr_entity, run_list);
 	wrr_entity->time_left = wrr_entity->time_slice;
 	p = wrr_task_of(wrr_entity);
 
@@ -146,8 +146,6 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	
 	if (NULL == wrr_entity) return;
-
-	printk(KERN_DEBUG "TASK_TICK_INFO cpu number %d task pid %d is ticking %d", task_cpu(p), task_pid_nr(current), wrr_entity->time_left);
 
 	if (--wrr_entity->time_left) return;
 

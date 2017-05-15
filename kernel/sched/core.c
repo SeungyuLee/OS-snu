@@ -1636,7 +1636,7 @@ static void __sched_fork(struct task_struct *p)
 #endif
 
 	INIT_LIST_HEAD(&p->rt.run_list);
-	INIT_LIST_HEAD(&p->wrr.run_list);
+	//INIT_LIST_HEAD(&p->wrr.run_list);
 
 #ifdef CONFIG_PREEMPT_NOTIFIERS
 	INIT_HLIST_HEAD(&p->preempt_notifiers);
@@ -1701,15 +1701,21 @@ void sched_fork(struct task_struct *p)
 	 * Revert to default priority/policy on fork if requested.
 	 */
 	if (unlikely(p->sched_reset_on_fork)) {
+		/*
 		if (task_has_rt_policy(p)) {
-			p->policy = SCHED_NORMAL; // need modify
+			p->policy = SCHED_NORMAL;
 			p->static_prio = NICE_TO_PRIO(0);
 			p->rt_priority = 0;
 		} else if (PRIO_TO_NICE(p->static_prio) < 0)
 			p->static_prio = NICE_TO_PRIO(0);
-
+		*/
+		p->policy = SCHED_WRR;
+		p->static_prio = NICE_TO_PRIO(0);
+		p->rt_priority = 0;
+		
 		p->prio = p->normal_prio = __normal_prio(p);
 		set_load_weight(p);
+		p->wrr.weight = 10;
 
 		/*
 		 * We don't need the reset flag anymore after the fork. It has
@@ -1718,11 +1724,18 @@ void sched_fork(struct task_struct *p)
 		p->sched_reset_on_fork = 0;
 	}
 	
+	if (!rt_prio(p->prio)) {
+		if (task_has_wrr_policy(p))
+			p->sched_class = &wrr_sched_class;
+		else
+			p->sched_class = &fair_sched_class;
+	}
+/*
 	if (task_has_wrr_policy(p))
 		p->sched_class = &wrr_sched_class;
 	else if (!rt_prio(p->prio))
 	 	p->sched_class = &fair_sched_class;
-
+*/
 	if (p->sched_class->task_fork)
 		p->sched_class->task_fork(p);
 
@@ -2919,15 +2932,12 @@ pick_next_task(struct rq *rq)
 	 * the fair class we can call that function directly:
 	 */
 	
-	/*
-	// need modify // need erase
+	// need to be modified
 	if (likely(rq->nr_running == rq->cfs.h_nr_running)) {
 		p = fair_sched_class.pick_next_task(rq);
 		if (likely(p))
 			return p;
 	}
-	// to here
-	*/
 
 	for_each_class(class) {
 		p = class->pick_next_task(rq);
@@ -7133,6 +7143,7 @@ void __init sched_init(void)
 	idle_thread_set_boot_cpu();
 #endif
 	init_sched_fair_class();
+	// init_sched_wrr_class();
 
 	scheduler_running = 1;
 }

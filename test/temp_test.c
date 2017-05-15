@@ -1,4 +1,4 @@
-
+#include <time.h>
 #include <stdio.h>
 #include <math.h>
 #include <wait.h>
@@ -10,7 +10,8 @@
 
 static struct timeval start, end, diff;
 double ordering_array[20];
-
+void prime_sieve(char *sieve, long long length); 
+void factorizing(long long n, char *sieve);
 static void start_time()
 {
     int ret;
