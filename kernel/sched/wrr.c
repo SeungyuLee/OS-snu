@@ -39,12 +39,12 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	struct wrr_rq *wrr_rq = &rq->wrr;
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	
-	if (NULL == wrr_entitiy) return;
+	if (NULL == wrr_entity) return;
 
 	spin_lock(&wrr_rq->wrr_rq_lock);
 	
 	struct list_head *head = &wrr_entity->run_list;
-	list_add_tail(&wrr_entity->run_list, &wrr_rq->run_queue);
+	list_add_tail(&wrr_entity->run_list, &wrr_rq->run_queue->run_list);
 
 	++wrr_rq->nr_running; // 무쓸모?
 	inc_nr_running(rq);
@@ -63,7 +63,7 @@ static void requeue_task_wrr(struct rq *rq, struct task_struct *p)
 	}
 
 	spin_lock(&wrr_rq->wrr_rq_lock);
-	list_move_tail(&wrr_entity->run_list, &wrr_rq->run_queue);
+	list_move_tail(&wrr_entity->run_list, &wrr_rq->run_queue->run_list);
 	spin_unlock(&wrr_rq->wrr_rq_lock);
 }
 
@@ -97,13 +97,10 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 	struct sched_wrr_entity *next_entity = NULL;
 	struct wrr_rq *wrr_rq =  &rq->wrr;
 
-	if (list_empty(&wrr_rq->run_queue))
+	if (list_empty(&wrr_rq->run_queue->run_list))
 		return NULL;
 
-	head_entity = &wrr_rq->run_queue;
-	head = &head_entity->run_list;
-
-	next_entity = list_entry(wrr_rq->run_queue.next, struct sched_wrr_entity, run_list);
+	next_entity = list_entry(wrr_rq->run_queue->run_list.next, struct sched_wrr_entity, run_list);
 
 	p = next_entity->task;
 
@@ -179,7 +176,7 @@ static void load_balance_wrr(void)
 
 static void put_prev_task_wrr(struct rq *rq, struct task_struct *p)
 {
-	update_curr_wrr(rq);
+//	update_curr_wrr(rq);
 }
 
 static void task_fork_wrr(struct task_struct *p)
@@ -193,12 +190,14 @@ static void task_fork_wrr(struct task_struct *p)
 			wrr_entity->time_slice;
 }
 
-static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *task)
+static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *p)
 {
 	return p->wrr.weight * TIME_SLICE;
 }
 
-static void switched_to_wrr(struct rq *this_rq, struct task_struct *p)
+static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags) {}
+
+static void switched_to_wrr(struct rq *rq, struct task_struct *p)
 {
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	wrr_entity->weight = DEFAULT_WEIGHT;
@@ -215,7 +214,6 @@ static void post_schedule_wrr(struct rq *rq){}
 static void task_woken_wrr(struct rq *rq, struct task_struct *p){}
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return true;	}
-static void check_preempt_curr_wrr(struct rq *rq, struct task_struct *p, int flags){}
 static void switched_from_wrr(struct rq *this_rq, struct task_struct *task){}
 static void prio_changed_wrr(struct rq *this_rq, struct task_struct *task, int oldprio){}
 
