@@ -84,8 +84,8 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	if (NULL == wrr_entity) return;
 	struct list_head *curr_next = &(&wrr_entity->run_list)->next;
 
-	list_del(&wrr_entity->run_list);
-/*
+	list_del_init(&wrr_entity->run_list);
+
 	if(wrr_rq->run_queue.next == &wrr_rq->run_queue)
 		wrr_rq->curr = NULL;
 	else if (p == wrr_rq->curr){
@@ -93,7 +93,6 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 			curr_next = curr_next->next;
 		wrr_rq->curr = wrr_task_of(list_entry(curr_next, struct sched_wrr_entity, run_list));
 	}
-*/
 
 	printk(KERN_DEBUG "DEQUEUE_TASK_INFO cpu number %d task pid %d is dequeued", task_cpu(p), task_pid_nr(current));	
 	--wrr_rq->wrr_nr_running;
@@ -108,29 +107,40 @@ static void yield_task_wrr(struct rq *rq)
 	requeue_task_wrr(rq, rq->curr);
 }
 
-
+/*
 static struct task_struct *pick_next_task_wrr(struct rq *rq)
 {
 	struct task_struct *p = NULL;
 	struct wrr_rq *wrr_rq = &rq->wrr;
 	struct sched_wrr_entity *wrr_entity = NULL;
-//	struct sched_wrr_entity *current_entity = &rq->curr->wrr;
+	struct sched_wrr_entity *current_entity = &rq->curr->wrr;
 
-	if (list_empty(&wrr_rq->run_queue))
-		return NULL;
-/*
-	wrr_entity = list_entry(wrr_rq->run_queue.run_list.next, struct sched_wrr_entity, run_list);
+	if (list_empty(&wrr_rq->run_queue))		return NULL;
+	
+	wrr_entity = list_first_entry(&wrr_rq->run_queue.run_list, struct sched_wrr_entity, run_list);
 
-	if(wrr_entity->time_slice > 0 && current_entity != wrr_entity) {
+	if(wrr_entity->time_slice > 0 && current_entity != wrr_entity) 
 		return wrr_task_of(wrr_entity);
-	}
-*/
-	wrr_entity = list_entry(wrr_rq->run_queue.next, struct sched_wrr_entity, run_list);
+
+	p = wrr_task_of(wrr_entity);
+	wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
+	requeue_task_wrr(rq, p);
+	wrr_entity = list_first_entry(&wrr_rq->run_queue.run_list, struct sched_wrr_entity, run_list);
+	wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
 	p = wrr_task_of(wrr_entity);
 
 	return p;
 }
+*/
 
+
+static struct task_struct *pick_next_task_wrr(struct rq *rq)
+{
+	struct task_struct *curr = rq->wrr.curr;
+	if (curr == NULL) return NULL;
+		curr->wrr.time_slice = curr->wrr.weight * TIME_SLICE;
+		return curr;
+}
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
 	/*
@@ -169,10 +179,8 @@ printk(KERN_DEBUG "TASK_TICK_INFO cpu number %d task pid %d is ticking %d", task
 static void set_curr_task_wrr(struct rq *rq)
 {
 	struct task_struct *p = rq->curr;
-
 	p->se.exec_start = rq->clock_task;
-
-	rq->wrr.curr = &p->wrr;
+	// rq->wrr.curr = &p->wrr;
 }
 
 static void put_prev_task_wrr(struct rq *rq, struct task_struct *p){ }
