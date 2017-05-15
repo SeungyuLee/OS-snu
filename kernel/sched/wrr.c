@@ -18,6 +18,24 @@ static DEFINE_SPINLOCK(LOAD_BALANCE_LOCK);
 static inline struct task_struct *wrr_task_of(struct sched_wrr_entity *wrr_entity) {
 	return container_of(wrr_entity, struct task_struct, wrr);
 }
+typedef struct task_group *wrr_rq_iter_t;
+
+static inline struct task_group *next_task_group(struct task_group *tg)
+{
+	do {
+		tg = list_entry_rcu(tg->list.next, typeof(struct task_group), list);
+	} while (&tg->list != &task_groups && task_group_is_autogroup(tg));
+
+	if (&tg->list == &task_groups)
+		tg = NULL;
+
+	return tg;
+}
+
+#define for_each_wrr_rq(wrr_rq, iter, rq)	\
+	for (iter = container_of(&task_groups, typeof(*iter), list);		\
+		(iter = next_task_group(iter)) &&	\
+		(wrr_rq = iter->wrr_rq[cpu_of(rq)]);)
 
 void init_wrr_rq(struct wrr_rq *wrr_rq)
 {
@@ -271,9 +289,11 @@ void print_wrr_stats(struct seq_file *m, int cpu)
 	struct wrr_rq *wrr_rq;
 
 	rcu_read_lock();
+
 	for_each_wrr_rq(wrr_rq, iter, cpu_rq(cpu))
 		print_wrr_rq(m, cpu, wrr_rq);
-	rcu_read_unlock(0;
+
+	rcu_read_unlock();
 }
 
-#endif
+#endif /* CONFIG_SCHED_DEBUG */

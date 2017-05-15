@@ -157,6 +157,8 @@ struct task_group {
 	atomic64_t load_avg;
 	atomic_t runnable_avg, usage_avg;
 #endif
+	struct sched_wrr_entity **wrr_se;
+	struct wrr_rq **wrr_rq;
 
 #ifdef CONFIG_RT_GROUP_SCHED
 	struct sched_rt_entity **rt_se;
