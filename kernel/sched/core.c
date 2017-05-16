@@ -90,6 +90,11 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+#define WRR_TIMESLICE (HZ / 100)
+#define LOADBALANCE_INTV ( 2 * HZ ) 
+DEFINE_SPINLOCK(balance_lock);
+unsigned_long balance_timestamp;
+
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
 	unsigned long delta;
@@ -749,6 +754,7 @@ static void set_load_weight(struct task_struct *p)
 {
 	int prio = p->static_prio - MAX_RT_PRIO;
 	struct load_weight *load = &p->se.load;
+	struct sched_wrr_entity *wrr_entity = &p->wrr;
 
 	/*
 	 * SCHED_IDLE tasks get minimal weight:
@@ -758,6 +764,10 @@ static void set_load_weight(struct task_struct *p)
 		load->inv_weight = WMULT_IDLEPRIO;
 		return;
 	}
+	if (p->policy == SCHED_WRR) {
+		wrr_entity->weight = 10;
+		wrr_entity->time_slice = 10 * 10;
+
 
 	load->weight = scale_load(prio_to_weight[prio]);
 	load->inv_weight = prio_to_wmult[prio];
@@ -1701,21 +1711,17 @@ void sched_fork(struct task_struct *p)
 	 * Revert to default priority/policy on fork if requested.
 	 */
 	if (unlikely(p->sched_reset_on_fork)) {
-		/*
-		if (task_has_rt_policy(p)) {
+		if (task_has_wrr_policy(p)) {
+		}
+		else if (task_has_rt_policy(p)) {
 			p->policy = SCHED_NORMAL;
 			p->static_prio = NICE_TO_PRIO(0);
 			p->rt_priority = 0;
 		} else if (PRIO_TO_NICE(p->static_prio) < 0)
 			p->static_prio = NICE_TO_PRIO(0);
-		*/
-		p->policy = SCHED_WRR;
-		p->static_prio = NICE_TO_PRIO(0);
-		p->rt_priority = 0;
 		
 		p->prio = p->normal_prio = __normal_prio(p);
 		set_load_weight(p);
-		p->wrr.weight = 10;
 
 		/*
 		 * We don't need the reset flag anymore after the fork. It has
@@ -2784,6 +2790,7 @@ void scheduler_tick(void)
 #ifdef CONFIG_SMP
 	rq->idle_balance = idle_cpu(cpu);
 	trigger_load_balance(rq, cpu);
+	load_balance_wrr(rq);
 #endif
 	rq_last_tick_reset(rq);
 }
@@ -3675,13 +3682,12 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 	if (running)
 		p->sched_class->put_prev_task(rq, p);
 
-	if (rt_prio(prio))
-		p->sched_class = &rt_sched_class;
-	else if (task_has_wrr_policy(p))
-		p->sched_class = &wrr_sched_class;
-	else 
-		p->sched_class = &fair_sched_class;
-
+	if(p->policy != SCHED_WRR) {
+		if (rt_prio(prio))
+			p->sched_class = &rt_sched_class;
+		else 
+			p->sched_class = &fair_sched_class;
+	}
 	p->prio = prio;
 
 	if (running)
@@ -3871,7 +3877,9 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 	p->normal_prio = normal_prio(p);
 	/* we are holding p->pi_lock already */
 	p->prio = rt_mutex_getprio(p);
-	if (rt_prio(p->prio)) {
+	if(policy == SCHED_WRR) {
+		p->sched_class = &wrr_sched_class;
+	} else if (rt_prio(p->prio)) {
 		p->sched_class = &rt_sched_class;
 #ifdef CONFIG_SCHED_HMP
 		if (cpumask_equal(&p->cpus_allowed, cpu_all_mask))
@@ -7146,6 +7154,7 @@ void __init sched_init(void)
 	// init_sched_wrr_class();
 
 	scheduler_running = 1;
+	balance_timestamp = jiffies;
 }
 
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
@@ -7205,7 +7214,7 @@ static void normalize_task(struct rq *rq, struct task_struct *p)
 	on_rq = p->on_rq;
 	if (on_rq)
 		dequeue_task(rq, p, 0);
-	__setscheduler(rq, p, SCHED_NORMAL, 0);
+	__setscheduler(rq, p, SCHED_WRR, 0);
 	if (on_rq) {
 		enqueue_task(rq, p, 0);
 		resched_task(rq->curr);
