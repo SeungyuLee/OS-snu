@@ -155,12 +155,10 @@ static int most_idle_cpu(struct task_struct *p)
 	for_each_online_cpu(cpu) {
 		rq = cpu_rq(cpu);
 		wrr_rq = &rq->wrr;
-		if(cpumask_test_cpu(cpu,tsk_cpus_allowed(p))) {
 			if (idle_cpu == -1 || lowest_total_weight > wrr_rq->total_weight) {
 				lowest_total_weight = wrr_rq->total_weight;
 				idle_cpu = cpu;
 			}
-		}
 	}
 
 	return idle_cpu;
@@ -168,10 +166,10 @@ static int most_idle_cpu(struct task_struct *p)
 
 static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
 {
-	int cpu = task_cpu(p);
+	int cpu = -1 // task_cpu(p);
 	int newcpu;
-	if(p->nr_cpus_allowed == 1)
-		return cpu;
+//	if(p->nr_cpus_allowed == 1)
+//		return cpu;
 
 	rcu_read_lock();
 
