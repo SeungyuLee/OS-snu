@@ -17,8 +17,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 
 	- enqueue_task_wrr : put new task in wrr_rq and arrange it by list_add_tail.
 	- dequeue_task_wrr : delete task from wrr_rq
-	- yield_task_wrr : call when task is yield. move task to the end of list when requeue is called.
-	- pick_next_task_wrr : pick next task for CPU. pick front one in list after requeue.
+	- pick_next_task_wrr : pick next task for CPU. pick next task of curr task.
 	- task_tick_wrr : reduce time_slice every cycle. reschedule task when time_slice is 0.
 	- task_fork_wrr : call when task is forked. set value of time_slice.
 
@@ -100,7 +99,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 
 ### 4. How to build and run
 
-- Comile
+- Compile
 
 ```
 ~/linux-3.10-artik$ arm-linux-gnueabi-gcc -I/include test/factor.c -o factor
@@ -122,6 +121,14 @@ root:~> ./factor 6523257244322 (large number taking a lot of factorization time)
 
 
 
+## 6. Improvement
+
+1. We face the problem that some heavy weighted task run infinitely, this task makes other tasks slow.
+2. So when task run (nearly) infinitely. we decide to reduce it's weight to make other tasks performance better.
+3. when one task finished. we will reduce it's weight 1 before pick next task.
+4. Then, It'll be scheduled shorter time after that.
+5. This would be decrease the task's performance. But increase whole kernel's prformance.
+6. But we couldn't made it because of lack of time. T.T
 
 ## Lessons
 
