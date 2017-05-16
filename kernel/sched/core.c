@@ -128,21 +128,21 @@ static void load_balance_wrr(struct rq *rq) {
 
 	spin_unlock(&balance_lock);
 
-	rcu_reqd_lock();
+	rcu_read_lock();
 	for_each_online_cpu(cpu) {
-		struct tq *this_rq = cpu_rq(cpu); 
-		struct wwr_rq *wrr = &this_rq->wrr;
+		struct rq *this_rq = cpu_rq(cpu); 
+		struct wrr_rq *wrr = &this_rq->wrr;
 		if(wrr->total_weight < min_weight) {
 			min_weight = wrr->total_weight;
 			min_rq = this_rq;
 		}
-		if(wrr-<total_weight > max_weight) {
+		if(wrr->total_weight > max_weight) {
 			max_weight = wrr->total_weight;
 			max_rq = this_rq;
 		}
 
 	}
-	rcu_rad_lock();
+	rcu_read_lock();
 
 	if (min_rq == max_rq) {
 		return;
@@ -153,17 +153,17 @@ static void load_balance_wrr(struct rq *rq) {
 
 	double_rq_lock(max_rq,min_rq);
 	
-	list_for_each_entry_safe(entity, n, &max_rq->wrr.runqueue, run_list) {
-		struct task_struct *p = container_of(se,struct task_struct,wrr);
-		if (is_migatable(max_rq,p,min_rq->cpu) &&
+	list_for_each_entry_safe(entity, n, &max_rq->wrr.run_queue, run_list) {
+		struct task_struct *p = container_of(entity,struct task_struct,wrr);
+		if (is_migratable(max_rq,p,min_rq->cpu) &&
 				entity->weight > mweight &&
-				min_weight + entity_weight < max_weight - entity_weight) {
+				min_weight + entity->weight < max_weight - entity->weight) {
 			mtask = p;
 			mweight = entity->weight;
 		}
 	}
 
-	if (mstask == NULL) {
+	if (mtask == NULL) {
 		double_rq_unlock(max_rq,min_rq);
 		return;
 	}
@@ -2860,7 +2860,7 @@ void scheduler_tick(void)
 #ifdef CONFIG_SMP
 	rq->idle_balance = idle_cpu(cpu);
 	trigger_load_balance(rq, cpu);
-//	load_balance_wrr(rq);
+	load_balance_wrr(rq);
 #endif
 	rq_last_tick_reset(rq);
 }

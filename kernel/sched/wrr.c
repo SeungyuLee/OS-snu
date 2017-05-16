@@ -235,7 +235,7 @@ const struct sched_class wrr_sched_class =
 	.prio_changed	= prio_changed_wrr,
 	.get_rr_interval= get_rr_interval_wrr,
 };
-
+/*
 #ifdef CONFIG_SCHED_DEBUG
 
 extern void print_wrr_rq(struct seq_file *m, int cpu, struct wrr_rq *wrr_rq);
@@ -254,3 +254,4 @@ void print_wrr_stats(struct seq_file *m, int cpu)
 }
 
 #endif // CONFIG_SCHED_DEBUG
+*/
