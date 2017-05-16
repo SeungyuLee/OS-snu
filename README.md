@@ -25,8 +25,17 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 2. `sched.h`
 
 	- sched_wrr_entity : information of entity. similar with rt but it has weight.
-	- wrr_rq : struct in rq containing information of wrr_rq. 
+	- wrr_rq : struct in rq containing information of wrr_rq.
 	
+	```
+	struct wrr_rq {
+		unsigned int total_weight; 	// sum of weight of tasks in rq
+		unsigned int nr_running 	// the number of tasks which is running now
+		raw_spinlock_t wrr_rq_lock; 	// spinlock for wrr_rq
+		struct task_struct *curr;	// task on CPU (NULL when there is nothing to run)
+		struct list_head run_queue;	// list_head for queueing tasks
+	```
+
 3.  System call in `kernel/sched.c`
 	
 	
@@ -36,11 +45,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		int sched_setweight(pid_t pid, int weight);
 		```
 		
-	: change weight value of process.
-		   
-	* system call number is 380.
-	* change calling process's weight when pid = 0.
-	* Only a user who is a root user or has a process should be able to change the weight using `sched_setweight` system call.
+	: change weight value of process. system call number is 380. change calling process's weight when pid = 0. Only a user who is a root user or has a process should be able to change the weight using `sched_setweight` system call.
 	
 	- get weight systemcall
 		
@@ -48,11 +53,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		int sched_getweight(pid_t pid);
 		```
 		
-	: return weight value of process.
-			
-	* system call number is 381.
-	* return calling process's weight when pid = 0.
-	* Any user can call `sched_getweight` system call.
+	: return weight value of process. system call number is 381. return calling process's weight when pid = 0. Any user can call `sched_getweight` system call.
 	
 	
 4. test program in`test/trial.c`
@@ -96,7 +97,25 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 
 ### 4. How to build and run
 
+- Comile
 
+```
+~/linux-3.10-artik$ arm-linux-gnueabi-gcc -I/include test/factor.c -o factor
+```
+
+- Push the test program
+
+```
+~/linux-3.10-artik$ push factor /root/factor
+```
+
+- Execute (via Artik)
+
+```
+root:~> ./factor 6523257244322 (large number taking a lot of factorization time)
+```
+
+### 5. Result
 
 
 
