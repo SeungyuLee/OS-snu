@@ -6,6 +6,7 @@
 #include <linux/spinlock_types.h>
 
 static DEFINE_SPINLOCK(set_weight_lock);
+#define TIMESLICE (HZ / 100)
 
 bool check_same_owner(struct task_struct *p){
 	const struct cred *cred = current_cred(), *pcred;
@@ -67,10 +68,9 @@ asmlinkage int sys_sched_setweight(pid_t pid, int weight)
 	rq = task_rq(task);
 	
 	if( rq->curr == task || current == task)
-		task->wrr.time_slice = task->wrr.weight * 10;
+		task->wrr.time_slice = task->wrr.weight * TIMESLICE;
 	else {
-		task->wrr.time_slice = task->wrr.weight * 10;
-		task->wrr.time_left = task->wrr.time_slice;
+		task->wrr.time_slice = task->wrr.weight * TIMESLICE;
 	}
 	
 	wrr_rq = &rq->wrr;
