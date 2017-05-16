@@ -89,11 +89,13 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 
 - Algorithm
 
-	1. If there are two or more run queues, select the largest weight sum (RQ_MAX) and the smallest weight (RQ_MIN).
-	2. SUM_WEIGHT (RQ_MAX) - When SUM_WEIGHT (RQ_MIN) = DIFF, select the task with the highest weight among the weights with a weight less than DIFF
-		- However, except for the task that is in the running state, select the task among the maximum weight.
-		- If there is no task satisfying the condition, terminate it.
-	3. Move the task from RQ_MAX to RQ_MIN.
+	1. scheduler_tick() in `kernel/sched/core.c`.
+
+	2. At each tick, balance_lock is grabbed and cpu check balance_timestamp global variable to check if it is time for load balancing. If it is, the cpu updates the timestamp. Then balance_lock is released and load balancing is started.
+
+	3. Find the MAX and MIN RQ. Afterwards, the locks for the two runqueues are acquired, and the function tries to find a migratable task with maximum weight.
+
+	4. If there exists a migratable task, the function migrates the task to MIN RQ and unlocks those two locks.
 
 
 ### 4. How to build and run
