@@ -125,7 +125,7 @@ Using factor praogram, we did investigtion for our new scheduler. We put number 
 	- We inferred the reason of the result. When the weight increases, the time slice of process increases. And cpu runs for a longer time before picking next tasks.
 	- With the result, we can see that our new scheduler works well.
 	
-[Plot.pdf](os-team15/plot.pdf) / [Demo video](https://youtu.be/YVow6PL794Q) : Links for the plot and Demo video
+[Plot.pdf](os-team15/plot.pdf) / [Demo video](https://youtu.be/OxrHg6ui5Mo) : Links for the plot and Demo video
 
 ### 6. Improvement
 
