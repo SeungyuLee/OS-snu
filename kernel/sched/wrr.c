@@ -33,11 +33,11 @@ static void enqueue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 
 	raw_spin_lock(&wrr_rq->wrr_rq_lock);
 	
-	if (wrr->curr == NULL) {
-		wrr->curr = p;
+	if (wrr_rq->curr == NULL) {
+		wrr_rq->curr = p;
 		list_add_tail(entity_list,rq_list);
 	}else {
-		list_add_tail(entity_list,&wrr->curr->wrr->run_list);
+		list_add_tail(entity_list, &(&wrr_rq->curr->wrr)->run_list);
 	}
 
 	++wrr_rq->nr_running;
@@ -54,19 +54,19 @@ static void dequeue_task_wrr(struct rq *rq, struct task_struct *p, int flags)
 	struct wrr_rq *wrr_rq = &rq->wrr;
 	struct list_head *entity_list = &wrr_entity->run_list;
 	struct list_head *rq_list = &wrr_rq->run_queue;
-	struct list_head *next = wrr_entity->run_list->next;
+	struct list_head *next = (&wrr_entity->run_list)->next;
 
 	raw_spin_lock(&wrr_rq->wrr_rq_lock);
 	
 	list_del_init(&wrr_entity->run_list);
 	
-	if (rq->run_queue.next == &rq->run_queue){ // runqueue is empty
-		wrr->curr = NULL;
-	} else if (p == wrr->curr) {
+	if (wrr_rq->run_queue.next == &wrr_rq->run_queue){ // runqueue is empty
+		wrr_rq->curr = NULL;
+	} else if (p == wrr_rq->curr) {
 		if(next == rq_list) {
 			next = rq_list->next;
 		}
-		wrr->curr = wrr_task_of(list_entry(next,struct sched_wrr_entity, run_list));
+		wrr_rq->curr = wrr_task_of(list_entry(next,struct sched_wrr_entity, run_list));
 	}
 	
 	--wrr_rq->nr_running;
@@ -89,13 +89,13 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 	if ( NULL == curr) {
 		return NULL;
 	}
-	curr->wrr.time_left = curr->wrr.time_slice;
+	curr->wrr.time_slice = curr->wrr.weight * TIME_SLICE;
 	return curr;
 }
 
 static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 {
-	struct wrr_rq *wrr_rq = &rq->wrr_rq;
+	struct wrr_rq *wrr_rq = &rq->wrr;
 	struct sched_wrr_entity *wrr_entity;
 	struct list_head *next;
 
@@ -105,7 +105,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 
 	wrr_entity = &p->wrr;
 
-	if (--wrr_entity->time_left) {
+	if (--wrr_entity->time_slice) {
 		raw_spin_unlock(&wrr_rq->wrr_rq_lock);
 		return;
 	}
@@ -114,12 +114,12 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 		next = wrr_entity->run_list.next;
 		if(next == &wrr_rq->run_queue)
 			next = next->next;
-		wrr_rq->curr = wrr_task_of(list_entry(next, struct wched_wrr_entity,run_list);
+		wrr_rq->curr = wrr_task_of(list_entry(next, struct sched_wrr_entity,run_list));
 		set_tsk_need_resched(p);
 	} else {
-		wrr_entity->time_left = wrr_entity->time_slice;
+		wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
 	}
-	rqw_spin_unlock(&wrr_rq->wrr_rq_lock);
+	raw_spin_unlock(&wrr_rq->wrr_rq_lock);
 
 }
 
@@ -137,7 +137,6 @@ static void task_fork_wrr(struct task_struct *p)
 	
 	wrr_entity->weight = p->real_parent->wrr.weight;
 	wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
-	wrr_entity->time_left = wrr_entity->time_slice;
 }
 
 static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *p)
@@ -158,7 +157,7 @@ static int most_idle_cpu(struct task_struct *p)
 		wrr_rq = &rq->wrr;
 		if(cpumask_test_cpu(cpu,tsk_cpus_allowed(p))) {
 			if (idle_cpu == -1 || lowest_total_weight > wrr_rq->total_weight) {
-				lowest_total_weight = total_weight;
+				lowest_total_weight = wrr_rq->total_weight;
 				idle_cpu = cpu;
 			}
 		}
@@ -203,7 +202,6 @@ static void switched_to_wrr(struct rq *rq, struct task_struct *p)
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	wrr_entity->weight = DEFAULT_WEIGHT;
 	wrr_entity->time_slice = DEFAULT_WEIGHT * TIME_SLICE;
-	wrr_entity->time_left = wrr_entity->time_slice;
 }
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return true;	}
