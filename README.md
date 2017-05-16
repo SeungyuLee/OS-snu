@@ -34,6 +34,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 		raw_spinlock_t wrr_rq_lock; 	// spinlock for wrr_rq
 		struct task_struct *curr;	// task on CPU (NULL when there is nothing to run)
 		struct list_head run_queue;	// list_head for queueing tasks
+	}
 	```
 
 3.  System call in `kernel/sched.c`
@@ -88,11 +89,11 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 
 - Algorithm
 
-1. If there are two or more run queues, select the largest weight sum (RQ_MAX) and the smallest weight (RQ_MIN).
-2. SUM_WEIGHT (RQ_MAX) - When SUM_WEIGHT (RQ_MIN) = DIFF, select the task with the highest weight among the weights with a weight less than DIFF
-	- However, except for the task that is in the running state, select the task among the maximum weight.
-	- If there is no task satisfying the condition, terminate it.
-3. Move the task from RQ_MAX to RQ_MIN.
+	1. If there are two or more run queues, select the largest weight sum (RQ_MAX) and the smallest weight (RQ_MIN).
+	2. SUM_WEIGHT (RQ_MAX) - When SUM_WEIGHT (RQ_MIN) = DIFF, select the task with the highest weight among the weights with a weight less than DIFF
+		- However, except for the task that is in the running state, select the task among the maximum weight.
+		- If there is no task satisfying the condition, terminate it.
+	3. Move the task from RQ_MAX to RQ_MIN.
 
 
 ### 4. How to build and run
