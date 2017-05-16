@@ -117,7 +117,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 		wrr_rq->curr = wrr_task_of(list_entry(next, struct sched_wrr_entity,run_list));
 		set_tsk_need_resched(p);
 	} else {
-		wrr_entity->time_left = wrr_entity->time_left;
+		wrr_entity->time_left = wrr_entity->time_slice;
 	}
 	raw_spin_unlock(&wrr_rq->wrr_rq_lock);
 
