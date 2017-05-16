@@ -1037,7 +1037,6 @@ struct sched_entity {
 
 struct sched_wrr_entity {
 	struct list_head run_list;
-	struct task_struct *task;
 	unsigned int weight;
 	unsigned int time_slice;
 	unsigned int time_left;

@@ -344,10 +344,9 @@ static inline int rt_bandwidth_enabled(void)
 struct wrr_rq {
 	unsigned int total_weight;
 	unsigned int nr_running;
-	unsigned int size;
-	spinlock_t wrr_rq_lock;
-	struct sched_wrr_entity *curr;
-	struct sched_wrr_entity run_queue;
+	raw_spinlock_t wrr_rq_lock;
+	struct task_struct *curr;
+	struct list_head run_queue;
 };
 
 /* Real-Time classes' related field in a runqueue: */
