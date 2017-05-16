@@ -56,7 +56,7 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 	: return weight value of process. system call number is 381. return calling process's weight when pid = 0. Any user can call `sched_getweight` system call.
 	
 	
-4. test program in`test/trial.c`
+4. test program in`test/factor.c`
 		
 	- make 20 child process using `fork()` to measure execution time of 1~20 weight on parent process.
 	- set weight using `sched_setweight` systemcall, check using `sched_getweight` systemcall.
@@ -114,21 +114,22 @@ The goal of this assignment is building our own CPU scheduler to support weighte
 - Execute (via Artik)
 
 ```
-root:~> ./factor 6523257244322 (large number taking a lot of factorization time)
+root:~> ./factor 12341234123412737 (large number taking a lot of factorization time)
 ```
 
 ### 5. Result
 
+Using factor praogram, we did investigtion for our new scheduler. We put number 12341234123412737 as prameter to factor.c program. The number is devided into 23 and 536575396670119. The last number 536575396670119 makes the program run for long time. By the test, we found several meaningful results.
 
+	- The execution time decreases when process's weight increase.
+	- We inferred the reason of the result. When the weight increases, the time slice of process increases. And cpu runs for a longer time before picking next tasks.
+	- With the result, we can see that our new scheduler works well.
+	
+[Plot.pdf](os-team15/plot.pdf) / [Demo video](https://youtu.be/YVow6PL794Q) : Links for the plot and Demo video
 
-## 6. Improvement
+### 6. Improvement
 
-1. We face the problem that some heavy weighted task run infinitely, this task makes other tasks slow.
-2. So when task run (nearly) infinitely. we decide to reduce it's weight to make other tasks performance better.
-3. when one task finished. we will reduce it's weight 1 before pick next task.
-4. Then, It'll be scheduled shorter time after that.
-5. This would be decrease the task's performance. But increase whole kernel's prformance.
-6. But we couldn't made it because of lack of time. T.T
+We face the problem that some heavy weighted task run infinitely, this task makes other tasks slow.So when task run (nearly) infinitely. we decide to reduce it's weight to make other tasks performance better. when one task finished. we will reduce it's weight 1 before pick next task. Then, It'll be scheduled shorter time after that. This would be decrease the task's performance. But increase whole kernel's prformance. But we couldn't made it because of lack of time. T.T
 
 ## Lessons
 
