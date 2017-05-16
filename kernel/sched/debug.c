@@ -251,7 +251,6 @@ void print_wrr_rq(struct seq_file *m, int cpu, struct wrr_rq *wrr_rq)
 
 	P(nr_running);
 	P(total_weight);
-	P(size);
 #undef P
 }
 

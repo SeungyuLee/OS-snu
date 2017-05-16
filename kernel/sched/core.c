@@ -93,7 +93,7 @@
 #define WRR_TIMESLICE (HZ / 100)
 #define LOADBALANCE_INTV ( 2 * HZ ) 
 DEFINE_SPINLOCK(balance_lock);
-unsigned_long balance_timestamp;
+unsigned long balance_timestamp;
 
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
@@ -767,7 +767,7 @@ static void set_load_weight(struct task_struct *p)
 	if (p->policy == SCHED_WRR) {
 		wrr_entity->weight = 10;
 		wrr_entity->time_slice = 10 * 10;
-
+}
 
 	load->weight = scale_load(prio_to_weight[prio]);
 	load->inv_weight = prio_to_wmult[prio];
@@ -2790,7 +2790,7 @@ void scheduler_tick(void)
 #ifdef CONFIG_SMP
 	rq->idle_balance = idle_cpu(cpu);
 	trigger_load_balance(rq, cpu);
-	load_balance_wrr(rq);
+//	load_balance_wrr(rq);
 #endif
 	rq_last_tick_reset(rq);
 }
