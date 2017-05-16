@@ -1039,7 +1039,6 @@ struct sched_wrr_entity {
 	struct list_head run_list;
 	unsigned int weight;
 	unsigned int time_slice;
-	unsigned int time_left;
 };
 
 struct sched_rt_entity {

@@ -89,7 +89,7 @@ static struct task_struct *pick_next_task_wrr(struct rq *rq)
 	if ( NULL == curr) {
 		return NULL;
 	}
-	curr->wrr.time_left = curr->wrr.time_slice;
+	curr->wrr.time_slice = curr->wrr.weight * TIME_SLICE;
 	return curr;
 }
 
@@ -105,7 +105,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 
 	wrr_entity = &p->wrr;
 
-	if (--wrr_entity->time_left) {
+	if (--wrr_entity->time_slice) {
 		raw_spin_unlock(&wrr_rq->wrr_rq_lock);
 		return;
 	}
@@ -117,7 +117,7 @@ static void task_tick_wrr(struct rq *rq, struct task_struct *p, int queued)
 		wrr_rq->curr = wrr_task_of(list_entry(next, struct sched_wrr_entity,run_list));
 		set_tsk_need_resched(p);
 	} else {
-		wrr_entity->time_left = wrr_entity->time_slice;
+		wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
 	}
 	raw_spin_unlock(&wrr_rq->wrr_rq_lock);
 
@@ -137,7 +137,6 @@ static void task_fork_wrr(struct task_struct *p)
 	
 	wrr_entity->weight = p->real_parent->wrr.weight;
 	wrr_entity->time_slice = wrr_entity->weight * TIME_SLICE;
-	wrr_entity->time_left = wrr_entity->time_slice;
 }
 
 static unsigned int get_rr_interval_wrr(struct rq *rq, struct task_struct *p)
@@ -203,7 +202,6 @@ static void switched_to_wrr(struct rq *rq, struct task_struct *p)
 	struct sched_wrr_entity *wrr_entity = &p->wrr;
 	wrr_entity->weight = DEFAULT_WEIGHT;
 	wrr_entity->time_slice = DEFAULT_WEIGHT * TIME_SLICE;
-	wrr_entity->time_left = wrr_entity->time_slice;
 }
 static bool yield_to_task_wrr(struct rq *rq, struct task_struct *p, bool preempt)
 {	return true;	}
