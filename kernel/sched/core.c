@@ -98,8 +98,6 @@ unsigned long balance_timestamp;
 static int is_migratable(struct rq *rq, struct task_struct *p, int dest_cpu) {
 	if (rq->curr == p)
 		return 0;
-	if (!cpumask_test_cpu(dest_cpu, tsk_cpus_allowed(p)))
-		return 0;
 
 	return 1;
 }
