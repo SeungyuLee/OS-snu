@@ -166,18 +166,11 @@ static int most_idle_cpu(struct task_struct *p)
 
 static int select_task_rq_wrr(struct task_struct *p, int sd_flag, int flags)
 {
-	int cpu = -1; // task_cpu(p);
-	int newcpu;
-//	if(p->nr_cpus_allowed == 1)
-//		return cpu;
+	int cpu = -1;
 
 	rcu_read_lock();
 
-	newcpu = most_idle_cpu(p);
-
-	if (newcpu != -1) {
-		cpu = newcpu;
-	}
+	cpu = most_idle_cpu(p);
 	
 	rcu_read_unlock();
 
