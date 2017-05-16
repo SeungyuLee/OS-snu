@@ -95,6 +95,86 @@
 DEFINE_SPINLOCK(balance_lock);
 unsigned_long balance_timestamp;
 
+static int is_migratable(struct rq *rq, struct task_struct *p, int dest_cpu) {
+	if (rq->curr == p)
+		return 0;
+	if (!cpumask_test_cpu(dest_cpu, tsk_cpus_allowed(p)))
+		return 0;
+
+	return 1;
+}
+
+static void load_balance_wrr(struct rq *rq) {
+	int cpu;
+	unsigned int max_weight = rq->wrr.total_weight;
+	struct rq *max_rq = rq;
+	unsigned int min_weight = rq->wrr.total_weight;
+	struct rq *min_rq = rq;
+	unsigned long now;
+	
+	struct task_struct *mtask;
+	unsigned int mweight;
+	struct sched_wrr_entity *entity,*n;
+	
+	spin_lock(&balance_lock);
+
+	now = jiffies;
+	if(time_before(now, balance_timestamp + LOADBALANCE_INTV)) {
+		spin_unlock(&balance_lock);
+		return;
+	}
+
+	balance_timestamp = now;
+
+	spin_unlock(&balance_lock);
+
+	rcu_reqd_lock();
+	for_each_online_cpu(cpu) {
+		struct tq *this_rq = cpu_rq(cpu); 
+		struct wwr_rq *wrr = &this_rq->wrr;
+		if(wrr->total_weight < min_weight) {
+			min_weight = wrr->total_weight;
+			min_rq = this_rq;
+		}
+		if(wrr-<total_weight > max_weight) {
+			max_weight = wrr->total_weight;
+			max_rq = this_rq;
+		}
+
+	}
+	rcu_rad_lock();
+
+	if (min_rq == max_rq) {
+		return;
+	}
+
+	mweight = 0;
+	mtask = NULL;
+
+	double_rq_lock(max_rq,min_rq);
+	
+	list_for_each_entry_safe(entity, n, &max_rq->wrr.runqueue, run_list) {
+		struct task_struct *p = container_of(se,struct task_struct,wrr);
+		if (is_migatable(max_rq,p,min_rq->cpu) &&
+				entity->weight > mweight &&
+				min_weight + entity_weight < max_weight - entity_weight) {
+			mtask = p;
+			mweight = entity->weight;
+		}
+	}
+
+	if (mstask == NULL) {
+		double_rq_unlock(max_rq,min_rq);
+		return;
+	}
+
+	deactivate_task(max_rq, mtask, 0);
+	set_task_cpu(mtask, min_rq->cpu);
+	activate_task(min_rq,mtask,0);
+
+	double_rq_unlock(max_rq,min_rq);
+}
+
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
 	unsigned long delta;
@@ -766,7 +846,7 @@ static void set_load_weight(struct task_struct *p)
 	}
 	if (p->policy == SCHED_WRR) {
 		wrr_entity->weight = 10;
-		wrr_entity->time_slice = 10 * 10;
+		wrr_entity->time_slice = 10 * WRR_TIMESLICE;
 
 
 	load->weight = scale_load(prio_to_weight[prio]);
@@ -1730,18 +1810,8 @@ void sched_fork(struct task_struct *p)
 		p->sched_reset_on_fork = 0;
 	}
 	
-	if (!rt_prio(p->prio)) {
-		if (task_has_wrr_policy(p))
-			p->sched_class = &wrr_sched_class;
-		else
-			p->sched_class = &fair_sched_class;
-	}
-/*
-	if (task_has_wrr_policy(p))
+	if (!rt_prio(p->prio))
 		p->sched_class = &wrr_sched_class;
-	else if (!rt_prio(p->prio))
-	 	p->sched_class = &fair_sched_class;
-*/
 	if (p->sched_class->task_fork)
 		p->sched_class->task_fork(p);
 
@@ -3886,8 +3956,6 @@ __setscheduler(struct rq *rq, struct task_struct *p, int policy, int prio)
 			do_set_cpus_allowed(p, &hmp_slow_cpu_mask);
 #endif
 	}
-	else if(task_has_wrr_policy(p))
-		p->sched_class = &wrr_sched_class;
 	else
 		p->sched_class = &fair_sched_class;
 	set_load_weight(p);
@@ -4621,7 +4689,6 @@ SYSCALL_DEFINE1(sched_get_priority_max, int, policy)
 		ret = MAX_USER_RT_PRIO-1;
 		break;
 	case SCHED_NORMAL:
-	case SCHED_WRR:
 	case SCHED_BATCH:
 	case SCHED_IDLE:
 		ret = 0;
@@ -4647,7 +4714,6 @@ SYSCALL_DEFINE1(sched_get_priority_min, int, policy)
 		ret = 1;
 		break;
 	case SCHED_NORMAL:
-	case SCHED_WRR:
 	case SCHED_BATCH:
 	case SCHED_IDLE:
 		ret = 0;
