@@ -131,7 +131,7 @@ Using factor praogram, we did investigtion for our new scheduler. We put number 
 
 We face the problem that some heavy weighted task run infinitely, this task makes other tasks slow.So when task run (nearly) infinitely. we decide to reduce it's weight to make other tasks performance better. when one task finished. we will reduce it's weight 1 before pick next task. Then, It'll be scheduled shorter time after that. This would be decrease the task's performance. But increase whole kernel's prformance. But we couldn't made it because of lack of time. T.T
 
-To clarify this explanation: Whenever a task finishes, we could reduce the task’s weight by 1 before picking next task. so that the task which has 20 weights will be decreased to 10 which is default weight in the end. This would decrease the task's performance. But it can prevent some malicious process to disturb the system’s performance. 
+To clarify this explanation: Whenever an aged task finishes, we could reduce the task’s weight by 1 before picking next task. so that the task which has 20 weights will be decreased to 10 which is default weight in the end. This would decrease the task's performance. But it can prevent some malicious process to disturb the system’s performance. 
 
 ## Lessons
 
