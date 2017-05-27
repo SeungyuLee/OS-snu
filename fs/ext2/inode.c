@@ -1571,3 +1571,50 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 
 	return error;
 }
+
+int ext2_set_gps_location(struct inode *inode)
+{
+	struct gps_location cur_loc = get_gps_location();
+	struct ext2_inode_info *inode_info = EXT2_I(inode);
+	
+	__u32 lat_integer = *((__u32 *) cur_loc.lat_integer);
+	__u32 lat_fractional = *((__u32 *) cur_loc.lat_fractional);
+	__u32 lng_integer = *((__u32 *) cur_loc.lng_integer);
+	__u32 lng_fractional = *((__u32 *) cur_loc.lng_fractional);
+	__u32 accuracy = *((__u32 *) cur_loc.accuracy);
+
+	spin_lock(&inode_info->gps_lock);
+
+	inode_info->i_lat_integer = (__le32) cpu_to_le32(lat_integer);
+	inode_info->i_lat_fractional = (__le32) cpu_to_le32(lat_fractional);
+	inode_info->i_lng_integer = (__le32) cpu_to_le32(lng_integer);
+	inode_info->i_lng_fractional = (__le32) cpu_to_le32(lng_fractional);
+	inode_info->i_accuracy = (__le32) cpu_to_le32(accuracy);
+	
+	spin_unlock(&inode_info->gps_lock);
+
+	return 0;
+}
+
+int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
+{
+	struct ext2_inode_info *inode_info = EXT2_I(inode);
+
+	spin_lock(&inode_info->gps_lock);
+
+	__u32 lat_integer = (__u32) le32_to_cpu(inode_info->i_lat_integer);
+	__u32 lat_fractional = (__u32) le32_to_cpu(inode_info->i_lat_fractional);
+	__u32 lng_integer = (__u32) le32_to_cpu(inode_info->i_lng_integer);
+	__u32 lng_fractional = (__u32) le32_to_cpu(inode_info->i_lng_fractional);
+	__u32 accuracy = (__u32) le32_to_cpu(inode_info->i_accuracy);
+
+	spin_unlock(&inode_info->gps_lock);
+
+	loc->lat_integer = *((int *) &lat_integer);
+	loc->lat_fractional = *((int *) &lat_fractional);
+	loc->lng_integer = *((int *) &lng_integer);
+	loc->lng_fractional = *((int *) &lng_fractional);
+	loc->accuracy = *((int *) &accuracy);
+
+	return 0;
+}
