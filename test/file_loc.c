@@ -13,9 +13,6 @@ int main(int argc, char **argv)
 	struct gps_location loc;
 	double latitude, longitude;
 	int accuracy;
-
-	int lat_integer, lat_fractional;
-	int lng_integer, lng_fractional;
 		
 	if(argc != 2){
 		printf("Error : Input file path."); 
@@ -29,8 +26,8 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	latitude = (double) loc.lat_integer + (double) loc.1at_fractional * 0.000001;
-	longitude = (double) loc.lng_integer + (double) loc.fractional * 0.000001;
+	latitude = (double) loc.lat_integer + (double) loc.lat_fractional * 0.000001;
+	longitude = (double) loc.lng_integer + (double) loc.lng_fractional * 0.000001;
 
 	printf("latitude : %lf\n", latitude);
 	printf("longitude : %lf\n", longitude);
