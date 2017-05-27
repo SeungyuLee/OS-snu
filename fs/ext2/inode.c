@@ -1591,7 +1591,7 @@ int ext2_set_gps_location(struct inode *inode)
 	inode_info->i_lng_fractional = (__le32) cpu_to_le32(lng_fractional);
 	inode_info->i_accuracy = (__le32) cpu_to_le32(accuracy);
 	
-	spin_unlock(%inode->gps_lock);
+	spin_unlock(&inode_info->gps_lock);
 
 	return 0;
 }
