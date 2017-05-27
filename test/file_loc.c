@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#define SYSCALL_GET_GPS_LOCATION 380
+#define SYSCALL_GET_GPS_LOCATION 381
 
 int main(int argc, char **argv)
 {
