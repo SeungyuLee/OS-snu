@@ -1571,3 +1571,20 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 
 	return error;
 }
+
+int ext2_set_gps_location(struct inode *inode)
+{
+	struct gps_location cur_loc = get_gps_location();
+
+	spin_lock(&inode->gps_lock);
+
+	inode->i_lat_integer = cur_loc.lat_integer;
+	inode->i_lat_fractional = cur_loc.lat_fractional;
+	inode->i_lng_integer = cur_lock.lng_integer;
+	inode->i_lng_fractional = cur_loc.lng_fractional;
+	inode->i_accuracy = cur_loc.accuracy;
+	
+	spin_unlock(%inode->gps_lock);
+
+	return 0;
+}
