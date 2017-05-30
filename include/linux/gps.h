@@ -8,6 +8,8 @@ struct gps_location {
 	int lng_fractional;
 	int accuracy;
 };
+
+struct gps_location get_gps_location(void);
 /*
 struct gps_kernel {
 	double latitude; // is double ok?
