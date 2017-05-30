@@ -420,11 +420,11 @@ struct ext2_inode {
 	} osd2;				/* OS dependent 2 */
 	
 	/* gps */
-	__le32 i_lat_integer;
-	__le32 i_lat_fractional;
-	__le32 i_lng_integer;
-	__le32 i_lng_fractional;
-	__le32 i_accuracy;	
+	__u32 i_lat_integer;
+	__u32 i_lat_fractional;
+	__u32 i_lng_integer;
+	__u32 i_lng_fractional;
+	__u32 i_accuracy;	
 };
 
 /*
@@ -482,6 +482,14 @@ struct ext2_inode_large {
 	__u32	i_crtime_extra;	/* extra File creation time (nsec << 2 | epoch)*/
 	__u32	i_version_hi;	/* high 32 bits for 64-bit version */
 	__u32   i_projid;       /* Project ID */
+	
+	/* gps */
+        __u32 i_lat_integer;
+        __u32 i_lat_fractional;
+        __u32 i_lng_integer;
+        __u32 i_lng_fractional;
+        __u32 i_accuracy;
+
 };
 
 #define EXT4_INODE_CSUM_HI_EXTRA_END	\
