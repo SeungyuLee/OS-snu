@@ -31,6 +31,7 @@
 
 #include <asm/byteorder.h>
 #include <uapi/linux/fs.h>
+#include <linux/gps.h> /* Geo-tagged File System */
 
 struct export_operations;
 struct hd_geometry;
