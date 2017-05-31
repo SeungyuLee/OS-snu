@@ -146,6 +146,37 @@ struct gps_location get_gps_location(void)
 ```
 Then, gps_location is sent to userspace using `copy_to_user` function.
 
+- fs/inode.c
+
+call `set_gps_location` function when file is modified.
+
+- fs/ext2/ext2.h
+
+```c
+struct ext2_inode {
+...	
+	/* gps */
+	__le32 i_lat_integer;
+  	__le32 i_lat_fractional;
+ 	__le32 i_lng_integer;
+ 	__le32 i_lng_fractional;
+ 	__le32 i_accuracy;
+};
+
+struct ext2_inode_info {
+...
+	/* gps */
+ 	__u32	i_lat_integer;
+ 	__u32	i_lat_fractional;
+ 	__u32	i_lng_integer;
+ 	__u32	i_lng_fractional;
+	__u32	i_accuracy;
+ 
+ 	spinlock_t gps_lock;
+ };		  
+```
+5 fields for gps location is added in two struct, inode in the memory and inode on the disk.
+
 - test/gpsudate.c
 
 sys_get_gps_location system call is called to set the device location with the location information input in user space.
@@ -159,7 +190,7 @@ sys_get_gps_location system call is called to display file or directory location
 ```c
 struct ext2_inode {
 ...
-/* gps */
+	/* gps */
 	__u32 i_lat_integer;
 	__u32 i_lat_fractional;
 	__u32 i_lng_integer;
