@@ -110,6 +110,7 @@ struct ext2_sb_info {
 	 * Note: It is used in ext2_show_options() to provide a consistent view
 	 * of the mount options.
 	 */
+	spinlock_t s_lock;
 };
 
 static inline spinlock_t *
@@ -703,7 +704,6 @@ struct ext2_inode_info {
 	__u32	i_lng_fractional;
 	__u32	i_accuracy;
 
-	spinlock_t gps_lock;
 };
 
 /*
