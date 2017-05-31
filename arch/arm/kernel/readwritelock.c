@@ -42,7 +42,7 @@ bool isInRange(int x, int degree, int range) {
 
 
 bool isCrossed(struct lock_struct *a, struct lock_struct *b) {
-	return isInRange(a->degree - a->range, b->degree, b->range) || isInRange(a->degree + a->range, b->degree, b->range);
+	return isInRange(a->degree - a->range, b->degree, b->range) || isInRange(a->degree + a->range, b->degree, b->range) || isInRange(b->degree - b->range, a->degree, a->range) || isInRange(b->degree + b->range, a->degree, a->range);
 }
 
 bool canLock(struct lock_struct *info, struct list_head *temp_lock_list) {
