@@ -1604,10 +1604,10 @@ int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
 	struct ext2_inode_info *inode_info = EXT2_I(inode);
 
 	loc->lat_integer = *((int *)&inode_info->i_lat_integer);
-	__u32 lat_fractional = *((int *)&inode_info->i_lat_fractional);
-	__u32 lng_integer = *((int *)&inode_info->i_lng_integer);
-	__u32 lng_fractional = *((int *)&inode_info->i_lng_fractional);
-	__u32 accuracy = *((int *)&inode_info->i_accuracy);
+	loc->lat_fractional = *((int *)&inode_info->i_lat_fractional);
+	loc->lng_integer = *((int *)&inode_info->i_lng_integer);
+	loc->lng_fractional = *((int *)&inode_info->i_lng_fractional);
+	loc->accuracy = *((int *)&inode_info->i_accuracy);
 
 	return 0;
 }
