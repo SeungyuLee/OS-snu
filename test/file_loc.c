@@ -9,7 +9,7 @@
 
 int main(int argc, char **argv)
 {
-	int ret;
+	int res;
 	struct gps_location loc;
 	double latitude, longitude;
 	int accuracy;
@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 	}
 
 	printf("input file path: %s", argv[1]);
-	ret = syscall(SYSCALL_GET_GPS_LOCATION, argv[1], &loc);
+	res = syscall(SYSCALL_GET_GPS_LOCATION, argv[1], &loc);
 	if(res < 0){
 		printf("Error : get gps_location error.");
 		return -1;
