@@ -6,7 +6,14 @@
 #include <linux/gps.h>
 #include <linux/namei.h>
 
-static struct gps_location dev_location;
+static struct gps_location dev_location = {
+	.lat_integer = 0,
+	.lat_fractional = 0,
+	.lng_integer = 0,
+	.lng_fractional = 0,
+	.accuracy = 0,
+}; /* needs to be initialized in the beginning */
+
 static DEFINE_RWLOCK(dev_location_lock);
 
 struct gps_location get_gps_location(void)
@@ -55,6 +62,7 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 
 asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
+	/* this syscall has to be reviewed again */
 	char *k_pathname;
 	struct gps_location k_loc;
 	struct inode *inode;
