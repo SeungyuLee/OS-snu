@@ -32,10 +32,16 @@ struct gps_location {
 - arch/arm/kernel/gps.c
 
 ```c
-static struct gps_location dev_location;
+static struct gps_location dev_location = {
+	.lat_integer = 0,
+	.lat_fractional = 0,
+	.lng_integer = 0,
+	.lng_fractional = 0,
+	.accuracy = 0,
+};
 static DEFINE_RWLOCK(dev_location_lock);
 ```
-  The global variable `dev_location` to hold the location of device and Read-Write Lock is declared.
+  The global variable `dev_location` to hold the location of device and Read-Write Lock is declared. `dev_location` needs to be initialized in the begining.
 
 ```c
 asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
@@ -147,6 +153,35 @@ sys_get_gps_location system call is called to set the device location with the l
 - test/file_loc.c
 
 sys_get_gps_location system call is called to display file or directory location information in user space.
+
+- e2fsprogs-1.43.4/lib/ext2fs/ext2_fs.h
+
+```c
+struct ext2_inode {
+...
+/* gps */
+	__u32 i_lat_integer;
+	__u32 i_lat_fractional;
+	__u32 i_lng_integer;
+	__u32 i_lng_fractional;
+	__u32 i_accuracy;
+	
+...
+};
+
+struct ext2_inode_large {
+...
+/* gps */
+	__u32 i_lat_integer;
+	__u32 i_lat_fractional;
+	__u32 i_lng_integer;
+	__u32 i_lng_fractional;
+	__u32 i_accuracy;
+...
+};
+```
+`struct ext2_inode` and `struct ext2_inode_large` is modifyed to make mke2fs
+use our modified ext2.
 
 /* 추가 필요 */
 
