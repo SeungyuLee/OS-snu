@@ -1587,15 +1587,21 @@ int ext2_setattr(struct dentry *dentry, struct iattr *iattr)
 
 int ext2_set_gps_location(struct inode *inode)
 {
+	printk(KERN_EMERG "ext2_set_gps_location is called\n");
 	struct gps_location cur_loc = get_gps_location();
 	struct ext2_inode_info *inode_info = EXT2_I(inode);
 	
-	inode_info->i_lat_integer = *((__u32 *) cur_loc.lat_integer);
-	inode_info->i_lat_fractional = *((__u32 *) cur_loc.lat_fractional);
-	inode_info->i_lng_integer = *((__u32 *) cur_loc.lng_integer);
-	inode_info->i_lng_fractional = *((__u32 *) cur_loc.lng_fractional);
-	inode_info->i_accuracy = *((__u32 *) cur_loc.accuracy);
+	inode_info->i_lat_integer = *((__u32 *) &cur_loc.lat_integer);
+	inode_info->i_lat_fractional = *((__u32 *) &cur_loc.lat_fractional);
+	inode_info->i_lng_integer = *((__u32 *) &cur_loc.lng_integer);
+	inode_info->i_lng_fractional = *((__u32 *) &cur_loc.lng_fractional);
+	inode_info->i_accuracy = *((__u32 *) &cur_loc.accuracy);
 
+	printk("%d\n", inode_info->i_lat_integer);
+	printk("%d\n", inode_info->i_lat_fractional);
+	printk("%d\n", inode_info->i_lng_integer);
+	printk("%d\n", inode_info->i_lng_fractional);
+	printk("%d\n", inode_info->i_accuracy);
 	return 0;
 }
 
