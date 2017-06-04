@@ -1440,7 +1440,6 @@ bad_inode:
 
 static int __ext2_write_inode(struct inode *inode, int do_sync)
 {
-	printk(KERN_EMERG "__ext2_write_inode is called");
 	struct ext2_inode_info *ei = EXT2_I(inode);
 	struct super_block *sb = inode->i_sb;
 	ino_t ino = inode->i_ino;
