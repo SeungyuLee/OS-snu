@@ -113,13 +113,11 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 	else
 		inode->i_op->get_gps_location(inode, &k_loc);
 
-	read_lock(&dev_location_lock);
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
 	//	kfree(k_pathname);
 		printk("copy to user failed\n");
 		return -EFAULT;
 	}
-	read_unlock(&dev_location_lock);
 
 //	kfree(k_pathname);
 	return 0;
@@ -127,10 +125,12 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 
 asmlinkage int sys_get_current_location(struct gps_location __user *loc)
 {
+	read_lock(&dev_location_lock);
 	if(copy_to_user(loc, &(dev_location), sizeof(*loc))!=0) {
 		printk("copy_to_user failed\n");
 		return -1;
 	}
+	read_unlock(&dev_location_lock);
 
 	return 0;
 }
