@@ -352,6 +352,18 @@ int generic_permission(struct inode *inode, int mask)
 
 #include <asm/div64.h>
 
+long long safety_div(long long x,long long y) {
+	long long res = x;
+	if (x < 0) {
+		res *= -1;
+	}
+	do_div(res,y);
+	if(x < 0) {
+		res *= -1;
+	}
+	return res;
+}
+
 long long apSin(long long x) { 
 	if (x < -3141592) {
 		x += 6283185;
@@ -361,17 +373,17 @@ long long apSin(long long x) {
 	}
 	long long second = 405284;
 	second = second * x;
-	do_div(second, 1000000);
+	second = safety_div(second, 1000000);
 	second = second * x;
-	do_div(second, 1000000);
+	second = safety_div(second, 1000000);
 	if (x < 0) {
 		x = 1273239 * x;
-		do_div(x, 1000000);
+		x = safety_div(x, 1000000);
 		return (x+second);
 	}
 	else {
 		x = 1273239 * x;
-		do_div(x, 1000000);
+		x = safety_div(x, 1000000);
 		return (x - second);
 	}	
 }
@@ -402,18 +414,18 @@ long long apArcTan(long long x) {
 	long long A = 77650;
 	long long B = -287434;
 	long long C = 3141592; 
-	do_div(C, 4);
+	C = safety_div(C, 4);
 	C = C - A - B;
 	long long xx = x * x;
-	do_div(xx, 1000000);
+	xx = safety_div(xx, 1000000);
 	long long res = A * xx;
-	do_div(res, 1000000);
+	res = safety_div(res, 1000000);
 	res = res + B;
 	res = res * xx;
-	do_div(res, 1000000);
+	res = safety_div(res, 1000000);
 	res = res + C;
 	res = res * x;
-	do_div(res, 1000000);
+	res = safety_div(res, 1000000);
 	return res;
 }
 
@@ -429,34 +441,34 @@ long long apSqrt(long long x) {
 long long getDistance(long long lat1,long long lng1, long long lat2, long long lng2) {
 	long long radius = 6400;
 	long long dLat = (lat2 - lat1) * 3141592;
-	do_div(dLat, 180*1000000);
+	dLat = safety_div(dLat, 180*1000000);
 	printk(KERN_EMERG "dLat: %lld\n", dLat);
 	long long dLng = (lng2 - lng1) * 3141592;
-	do_div(dLng, 180*1000000);
+	dLng = safety_div(dLng, 180*1000000);
 	printk(KERN_EMERG "dLng: %lld\n", dLng);
 	long long pt1y = lng1 * 3141592;
-	do_div(pt1y, 180*1000000);
+	pt1y = safety_div(pt1y, 180*1000000);
 	long long pt2y = lng2 * 3141592;
-	do_div(pt2y, 180*1000000);
+	pt2y = safety_div(pt2y, 180*1000000);
 
 	printk(KERN_EMERG "pt1y: %lld\n", pt1y);
 	printk(KERN_EMERG "pt2y: %lld\n", pt2y);
-	do_div(dLat, 2);
-	do_div(dLng, 2);
+	dLat = safety_div(dLat, 2);
+	dLng = safety_div(dLng, 2);
 	long long a = apSin(dLat) * apSin(dLat);
-	do_div(a, 1000000);
+	a = safety_div(a, 1000000);
 	long long second = apSin(dLng) * apSin(dLng);
-	do_div(second, 1000000);
+	second = safety_div(second, 1000000);
 
 	printk(KERN_EMERG "a: %lld\n", a);
 	second = second * apCos(pt1y);
-	do_div(second, 1000000);
+	second = safety_div(second, 1000000);
 	second = second * apCos(pt2y);
-	do_div(second, 1000000);
+	second = safety_div(second, 1000000);
 	printk(KERN_EMERG "second: %lld\n", second);
 	a = a + second;
 	long long b = apSqrt(a) * 1000000;
-	do_div(b, apSqrt(1000000-a));
+	b = safety_div(b, apSqrt(1000000-a));
 	long long c = 2 * b;
 
 	return radius * c;
