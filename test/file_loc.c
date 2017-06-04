@@ -14,15 +14,15 @@ int main(int argc, char **argv)
 	double latitude, longitude;
 	int accuracy;
 		
-	if(argc != 2){
-		printf("Error : Input file path."); 
+	if(argc < 2){
+		printf("Error : Input file path.\n"); 
 		return -1;
 	}
 
-	printf("input file path: %s", argv[1]);
+	printf("input file path: %s\n", argv[1]);
 	res = syscall(SYSCALL_GET_GPS_LOCATION, argv[1], &loc);
 	if(res < 0){
-		printf("Error : get gps_location error.");
+		printf("Error : get gps_location error.\n");
 		return -1;
 	}
 

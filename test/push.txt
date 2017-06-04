@@ -1,0 +1,2 @@
+sdb push gpsupdate /root/gpsupdate
+sdb push file_loc /root/fileloc

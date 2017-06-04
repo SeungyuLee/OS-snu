@@ -1507,8 +1507,12 @@ static int update_time(struct inode *inode, struct timespec *time, int flags)
 		inode->i_atime = *time;
 	if (flags & S_VERSION)
 		inode_inc_iversion(inode);
-	if (flags & S_CTIME)
+	if (flags & S_CTIME){ /* when the file is created */
 		inode->i_ctime = *time;
+		// TODO: check
+		if(inode->i_op->set_gps_location)
+			inode->i_op->set_gps_location(inode);	
+	}
 	if (flags & S_MTIME){ /* when the file is modified */
 		inode->i_mtime = *time;
 		// TODO: check

@@ -63,52 +63,74 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
 	/* this syscall has to be reviewed again */
-	char *k_pathname;
+	// char *k_pathname;
 	struct gps_location k_loc;
 	struct inode *inode;
-	struct path k_path;
+	struct path path;
 	int result;
 
 	int path_length = PATH_MAX + 1;
-	if(pathname == NULL || loc == NULL)
+	if(pathname == NULL || loc == NULL){
+		printk("pathname is null or loc is null error\n");
 		return -EINVAL;
+	}
+/*
 	k_pathname = kmalloc(path_length * sizeof(char), GFP_KERNEL);
-	if(k_pathname == NULL)
+	
+	if(k_pathname == NULL){
+		printk("No memory for k_pathname\n");
 		return -ENOMEM;
+	}
 	
 	result = strncpy_from_user(k_pathname, pathname, path_length);
 	
-	if(result <= 0 || result > path_length){
+	if(result < 0 || result > path_length){
 		kfree(k_pathname);
+		printk("pathname is invalid\n");
 		return -EFAULT;
 	}
-
-	if(kern_path(pathname, LOOKUP_FOLLOW, &k_path)){
-		kfree(k_pathname);
+*/
+	if(kern_path(pathname, LOOKUP_FOLLOW, &path)){
+	//	kfree(k_pathname);
+		printk("cannot find the path\n");
 		return -EINVAL;
 	}
 
-	inode = k_path.dentry->d_inode;
+	inode = path.dentry->d_inode;
 
 	if(!(S_IRUSR & inode->i_mode)){
-		kfree(k_pathname);
+	//	kfree(k_pathname);
+		printk("Access error\n");
 		return -EACCES;
 	}
 
 
 	if(inode->i_op->get_gps_location==NULL){
-		kfree(k_pathname);
+	//	kfree(k_pathname);
+		printk("No get_gps_location inode operation\n");
 		return -ENODEV;
 	}
 	else
 		inode->i_op->get_gps_location(inode, &k_loc);
-	
+
+	read_lock(&dev_location_lock);
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
-		kfree(k_pathname);
+	//	kfree(k_pathname);
+		printk("copy to user failed\n");
 		return -EFAULT;
 	}
+	read_unlock(&dev_location_lock);
 
-	kfree(k_pathname);
+//	kfree(k_pathname);
 	return 0;
 }
 
+asmlinkage int sys_get_current_location(struct gps_location __user *loc)
+{
+	if(copy_to_user(loc, &(dev_location), sizeof(*loc))!=0) {
+		printk("copy_to_user failed\n");
+		return -1;
+	}
+
+	return 0;
+}
