@@ -23,8 +23,10 @@ int main(int argc, char **argv)
 	int lat_integer, lat_fractional;
 	int lng_integer, lng_fractional;
 
-	if (argc != 4) 
+	if (argc != 4){ 
+		printf("put 3 parameters!\n");
 		return -1;
+	}
 
 	sscanf(argv[1], "%lf", &latitude);
 	sscanf(argv[2], "%lf", &longitude);
@@ -45,6 +47,9 @@ int main(int argc, char **argv)
 	printf("input longitude: %d + (%d * 10^-6)\n", loc.lng_integer, loc.lng_fractional);
 	printf("input accuracy: %d\n", loc.accuracy);
 
-	// syscall(SYSCALL_SET_GPS_LOCATION, &loc);
+	if(syscall(SYSCALL_SET_GPS_LOCATION, &loc)!=0){
+		printf("SYSCALL_SET_GPS_LOCATION ERROR!\n");
+	}
+	printf("SYSCALL_SET_GPS_LOCATION success!\n");
 	return 0;
 }

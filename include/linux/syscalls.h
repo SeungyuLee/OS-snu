@@ -849,4 +849,5 @@ asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
 #include <linux/gps.h>
 asmlinkage int sys_set_gps_location(struct gps_location __user *loc);
 asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc);
+asmlinkage int sys_get_current_location(struct gps_location __user *loc);
 #endif
