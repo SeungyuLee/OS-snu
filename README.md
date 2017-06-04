@@ -146,9 +146,94 @@ struct gps_location get_gps_location(void)
 ```
 Then, gps_location is sent to userspace using `copy_to_user` function.
 
-- fs/inode.c
+- fs/ext2/inode.c
 
-call `set_gps_location` function when file is modified.
+```c
+...
+struct inode *ext2_iget (struct super_block *sb, unsigned long ino)
+{
+	...
+	ei->i_lat_integer = le32_to_cpu(raw_inode->i_lat_integer);
+	ei->i_lat_fractional = le32_to_cpu(raw_inode->i_lat_fractional);
+	ei->i_lng_integer = le32_to_cpu(raw_inode->i_lng_integer);
+	ei->i_lng_fractional = le32_to_cpu(raw_inode->i_lng_fractional);
+	ei->i_accuracy = le32_to_cpu(raw_inode->i_accuracy);
+	...
+}
+
+...
+
+static int __ext2_write_inode(struct inode *inode, int do_sync)
+{
+	...
+	raw_inode->i_lat_integer = cpu_to_le32(ei->i_lat_integer);
+	raw_inode->i_lat_fractional = cpu_to_le32(ei->i_lat_fractional);
+	raw_inode->i_lng_integer = cpu_to_le32(ei->i_lng_integer);
+	raw_inode->i_lng_fractional = cpu_to_le32(ei->i_lng_fractional);
+	raw_inode->i_accuracy = cpu_to_le32(ei->i_accuracy);
+	...
+}
+
+...
+
+int ext2_set_gps_location(struct inode *inode)
+{
+	struct gps_location cur_loc = get_gps_location();
+	struct ext2_inode_info *inode_info = EXT2_I(inode);
+	
+	inode_info->i_lat_integer = *((__u32 *) &cur_loc.lat_integer);
+	inode_info->i_lat_fractional = *((__u32 *) &cur_loc.lat_fractional);
+	inode_info->i_lng_integer = *((__u32 *) &cur_loc.lng_integer);
+	inode_info->i_lng_fractional = *((__u32 *) &cur_loc.lng_fractional);
+	inode_info->i_accuracy = *((__u32 *) &cur_loc.accuracy);
+
+	return 0;
+}
+
+int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
+{
+	struct ext2_inode_info *inode_info = EXT2_I(inode);
+
+	loc->lat_integer = *((int *)&inode_info->i_lat_integer);
+	loc->lat_fractional = *((int *)&inode_info->i_lat_fractional);
+	loc->lng_integer = *((int *)&inode_info->i_lng_integer);
+	loc->lng_fractional = *((int *)&inode_info->i_lng_fractional);
+	loc->accuracy = *((int *)&inode_info->i_accuracy);
+
+	return 0;
+}
+```
+
+- fs/indoe.c
+
+```c
+static int update_time(struct inode *inode, struct timespec *time, int flags)
+{
+	if (inode->i_op->update_time)
+		return inode->i_op->update_time(inode, time, flags);
+
+	if (flags & S_ATIME)
+		inode->i_atime = *time;
+	if (flags & S_VERSION)
+		inode_inc_iversion(inode);
+	if (flags & S_CTIME){ /* when the file is created */
+		inode->i_ctime = *time;
+		// TODO: check
+		if(inode->i_op->set_gps_location)
+			inode->i_op->set_gps_location(inode);	
+	}
+	if (flags & S_MTIME){ /* when the file is modified */
+		inode->i_mtime = *time;
+		// TODO: check
+		if(inode->i_op->set_gps_location)
+			inode->i_op->set_gps_location(inode);
+	}
+	mark_inode_dirty_sync(inode);
+	return 0;
+}
+```
+
+GPS info of regular files is updated whenever they are created or modified. `update_time` function calls `set_gps_location` function because the i_mtime (modified time) value is modified here (this function is called if the inode is modified).
 
 - fs/ext2/ext2.h
 
@@ -176,6 +261,65 @@ struct ext2_inode_info {
  };		  
 ```
 5 fields for gps location is added in two struct, inode in the memory and inode on the disk.
+
+- fs/ext2/file.c
+
+```c
+const struct inode_operations ext2_file_inode_operations = {
+...
+	.set_gps_location = ext2_set_gps_location,
+	.get_gps_location = ext2_get_gps_location,
+};
+```
+
+- include/linux/fs.h
+
+```c
+struct inode_operations {
+	...
+	int (*set_gps_location)(struct inode *);
+	int (*get_gps_location)(struct inode *, struct gps_location *);
+	...
+```
+
+The GPS-related operations are defined to inode_operation.
+
+- fs/namei.c
+
+```c
+int gps_permissionCheck(struct inode *inode) {
+	struct gps_location cur_loc = get_gps_location();
+	struct ext2_inode_info *inode_info = EXT2_I(inode);
+
+	if (NULL == inode_info) {
+		return 0;
+	}
+	
+	int lat_integer = *((int *)&inode_info->i_lat_integer);
+	int lat_fractional = *((int *)&inode_info->i_lat_fractional);
+	int lng_integer = *((int *)&inode_info->i_lng_integer);
+	int lng_fractional = *((int *)&inode_info->i_lng_fractional);
+	int accuracy = *((int *)&inode_info->i_accuracy);
+
+	if (lat_integer == cur_loc.lat_integer && lng_integer == cur_loc.lng_integer) {
+		return 0;
+	}
+	return -EACCES;
+}
+
+...
+
+static inline int do_inode_permission(struct inode *inode, int mask)
+{
+	...
+	if(gps_permisson(inode) == -EACCES) {
+		return -EACCES;
+	}
+	...
+}
+```
+
+
 
 - test/gpsudate.c
 
@@ -211,10 +355,9 @@ struct ext2_inode_large {
 ...
 };
 ```
-`struct ext2_inode` and `struct ext2_inode_large` is modifyed to make mke2fs
-use our modified ext2.
+`struct ext2_inode` and `struct ext2_inode_large` is modifyed to make mke2fs use our modified ext2.
 
-/* 추가 필요 */
+
 
 
 ### 4. How to build and run
