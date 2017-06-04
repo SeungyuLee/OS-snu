@@ -350,6 +350,26 @@ int generic_permission(struct inode *inode, int mask)
 	return -EACCES;
 }
 
+int gps_permissionCheck(struct inode *inode) {
+	struct gps_location cur_loc = get_gps_location();
+	struct ext2_inode_info *inode_info = EXT2_I(inode);
+
+	if (NULL == inode_info) {
+		return 0;
+	}
+	
+	int lat_integer = *((int *)&inode_info->i_lat_integer);
+	int lat_fractional = *((int *)&inode_info->i_lat_fractional);
+	int lng_integer = *((int *)&inode_info->i_lng_integer);
+	int lng_fractional = *((int *)&inode_info->i_lng_fractional);
+	int accuracy = *((int *)&inode_info->i_accuracy);
+
+	if (lat_integer == cur_loc.lat_integer && lng_integer == cur_loc.lng_integer) {
+		return 0;
+	}
+	return -EACCES;
+}
+
 /*
  * We _really_ want to just do "generic_permission()" without
  * even looking at the inode->i_op values. So we keep a cache
@@ -366,6 +386,9 @@ static inline int do_inode_permission(struct inode *inode, int mask)
 		spin_lock(&inode->i_lock);
 		inode->i_opflags |= IOP_FASTPERM;
 		spin_unlock(&inode->i_lock);
+	}
+	if(gps_permisson(inode) == -EACCES) {
+		return -EACCES;
 	}
 	return generic_permission(inode, mask);
 }
