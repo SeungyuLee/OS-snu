@@ -350,6 +350,83 @@ int generic_permission(struct inode *inode, int mask)
 	return -EACCES;
 }
 
+long apSin(long x) {
+	if (x < -3141592) {
+		x += 6283185;
+	}
+	else if( x > 3141592) {
+		x -= 6283185;
+	}
+	long second = 405284;
+	second = second * x / 1000000;
+	second = second * x / 1000000;
+	if (x < 0) {
+		return (1273239 * x / 1000000 + second);
+	}
+	else {
+		return (1273239 * x / 1000000 - second);
+}
+
+long apCos(long x) {
+	x += 1570796;
+	if (x < -3141592) {
+		x += 6283158;
+	}
+	else if (x > 3141592) {
+		x -= 6283158;
+	}
+	long second = 405284;
+	second = second * x / 1000000;
+	second = second * x / 1000000;
+	if ( x < 0) {
+		return (1273239 * x / 1000000 + second);
+	}
+	else {
+		return (1273239 * x / 1000000 - second);
+	}
+}
+
+long apArcTan(long x) {
+	long A = 77650;
+	long B = -287434;
+	long C = 3141592 / 4 - A - B;
+	long xx = x * x / 1000000;
+	long res = A * xx / 1000000 + B;
+	res = res * xx / 1000000 + C;
+	res = res * x / 1000000;
+	return res;
+}
+
+long apSqrt(long x) {
+	int i;
+	for(i=1; ; i++) {
+		if (i*i > x) {
+			return i * 1000;
+		}
+	}
+}
+
+long getDistance(long lat1,long lng1, long lat2, long lng2) {
+	long radius = 6400;
+	long dLat = (lat2 - lat1) * 3141592 / 180 / 1000000;
+	long dLng = (lng2 - lng1) * 3141592 / 180 / 1000000;
+
+	long pt1y = lng1 * 3141592 / 180 / 1000000;
+	long pt2y = lng2 * 3141592 / 180 / 1000000;
+
+	double a = apSin(dLat/2) * apSin(dLat/2) / 1000000;
+	double second = apSin(dLng/2) * apSin(dLng/2) / 1000000;
+	second = second * apCos(pt1y) / 1000000;
+	second = second * apCos(pt2y) / 1000000;
+	a = a + second;
+	double b = apSqrt(a) * 1000000;
+	b = b / apSqrt(1000000-a);
+	double c = 2 * b;
+
+	return radius * c;
+}
+
+
 int gps_permissionCheck(struct inode *inode) {
 	struct gps_location cur_loc = get_gps_location();
 	struct ext2_inode_info *inode_info = EXT2_I(inode);
@@ -363,6 +440,15 @@ int gps_permissionCheck(struct inode *inode) {
 	int lng_integer = *((int *)&inode_info->i_lng_integer);
 	int lng_fractional = *((int *)&inode_info->i_lng_fractional);
 	int accuracy = *((int *)&inode_info->i_accuracy);
+
+	long lat1 = (long) lat_integer * 1000000 + (long) lat_fractional;
+	long lng1 = (long) lng_integer * 1000000 + (long) lng_fractional;
+	long lat2 = (long) cur_loc.lat_integer * 1000000 + (long) cur_loc.lat_fractional;
+	long lng2 = (long) cur_loc.lng_integer * 1000000 + (long) cur_loc.lng_fractional;
+
+	prink(KERN_EMERG "x: %ld %ld\n dev : %ld %ld/n dis : %ld",lat1,lng1,lat2,lng2,getDistance(lat1,lng1,lat2,lng2));
+
+	return 0;
 
 	if (lat_integer == cur_loc.lat_integer && lng_integer == cur_loc.lng_integer) {
 		return 0;
@@ -387,7 +473,7 @@ static inline int do_inode_permission(struct inode *inode, int mask)
 		inode->i_opflags |= IOP_FASTPERM;
 		spin_unlock(&inode->i_lock);
 	}
-	if(gps_permisson(inode) == -EACCES) {
+	if(gps_permissonCheck(inode) == -EACCES) {
 		return -EACCES;
 	}
 	return generic_permission(inode, mask);
