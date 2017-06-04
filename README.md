@@ -80,6 +80,7 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 }
 ```
 In `sys_set_gps_location` systemcall, location information from user space is stored in `dev_location`.
+
 ```c
 asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
@@ -203,6 +204,9 @@ int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
 	return 0;
 }
 ```
+
+ext2_set_gps_location: Takes the inode as an argument and puts information corresponding to gps_location in the corresponding inode.
+ext2_get_gps_location: Takes the inode and struct gps_location as arguments and puts the information corresponding to gps_location in the corresponding inode into the struct gps_location.
 
 - fs/indoe.c
 
@@ -358,9 +362,7 @@ struct ext2_inode_large {
 `struct ext2_inode` and `struct ext2_inode_large` is modifyed to make mke2fs use our modified ext2.
 
 
-
-
-### 4. How to build and run
+### 4. Location-based file access
 
 
 
@@ -370,8 +372,8 @@ struct ext2_inode_large {
 
 ## Lessons
 
-1. 
-2. 
+1. We got to know more about inode. We found that inode_info is a wrap around inode, and this relationship allows the linux inode to be designed to make it easier to access the inode structure for each file system.
+2. We learned how to handle endian-ness in the kernel. lexx_to_cpu, and cpu_to_lexx unifies big and little endian according to each cpu.
 
 ## Team Members
 
