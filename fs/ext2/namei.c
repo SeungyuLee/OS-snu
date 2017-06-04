@@ -107,9 +107,9 @@ static int ext2_create (struct inode * dir, struct dentry * dentry, umode_t mode
 	inode->i_op = &ext2_file_inode_operations;
 	// TODO: check
     //	ext2_set_gps_location(inode); /* Geo-tagged File System */
-	printk("ext2_create is called\n");
-//	if(inode->i_op->set_gps_location!=NULL)
-//	inode->i_op->set_gps_location(inode);
+	printk(KERN_EMERG "ext2_create is called\n");
+	if(inode->i_op->set_gps_location!=NULL)
+		inode->i_op->set_gps_location(inode);
 	
 	if (ext2_use_xip(inode->i_sb)) {
 		inode->i_mapping->a_ops = &ext2_aops_xip;
@@ -359,9 +359,6 @@ static int ext2_rename (struct inode * old_dir, struct dentry * old_dentry,
  	 * rename.
 	 */
 	old_inode->i_ctime = CURRENT_TIME_SEC;
-	// TODO: check below
-	// ext2_set_gps_location(old_inode); /* Geo-tagged File System */
-	// ext2_set_gps_location(new_inode); /* Geo-tagged File System */
 	mark_inode_dirty(old_inode);
 
 	ext2_delete_entry (old_de, old_page);

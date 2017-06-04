@@ -358,11 +358,7 @@ int gps_permissionCheck(struct inode *inode) {
 		return 0;
 	}
 	
-	int lat_integer = *((int *)&inode_info->i_lat_integer);
-	int lat_fractional = *((int *)&inode_info->i_lat_fractional);
-	int lng_integer = *((int *)&inode_info->i_lng_integer);
-	int lng_fractional = *((int *)&inode_info->i_lng_fractional);
-	int accuracy = *((int *)&inode_info->i_accuracy);
+
 
 	if (lat_integer == cur_loc.lat_integer && lng_integer == cur_loc.lng_integer) {
 		return 0;
@@ -387,9 +383,11 @@ static inline int do_inode_permission(struct inode *inode, int mask)
 		inode->i_opflags |= IOP_FASTPERM;
 		spin_unlock(&inode->i_lock);
 	}
-	if(gps_permisson(inode) == -EACCES) {
+	
+	if(gps_permissonCheck(inode) == -EACCES) {
 		return -EACCES;
 	}
+	
 	return generic_permission(inode, mask);
 }
 

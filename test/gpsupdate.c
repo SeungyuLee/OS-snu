@@ -37,6 +37,15 @@ int main(int argc, char **argv)
 	lng_integer = (longitude>=0) ? (int) longitude : (int) longitude-1;
 	lng_fractional = (int) ((longitude - lng_integer) * 1000000);
 
+	if(lat_fractional == 1000000){
+		lat_integer = latitude;
+		lat_fractional = 0;
+	}
+	if(lng_fractional == 1000000){
+		lng_integer = longitude;
+		lng_fractional = 0;
+	}
+
 	memcpy(&loc.lat_integer, &lat_integer, sizeof(int));
 	memcpy(&loc.lat_fractional, &lat_fractional, sizeof(int));
 	memcpy(&loc.lng_integer, &lng_integer, sizeof(int));
@@ -49,6 +58,7 @@ int main(int argc, char **argv)
 
 	if(syscall(SYSCALL_SET_GPS_LOCATION, &loc)!=0){
 		printf("SYSCALL_SET_GPS_LOCATION ERROR!\n");
+		return 0;
 	}
 	printf("SYSCALL_SET_GPS_LOCATION success!\n");
 	return 0;
