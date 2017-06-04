@@ -350,32 +350,43 @@ int generic_permission(struct inode *inode, int mask)
 	return -EACCES;
 }
 
-long apSin(long x) {
+#include <asm/div64.h>
+
+long long apSin(long long x) { 
 	if (x < -3141592) {
 		x += 6283185;
 	}
 	else if( x > 3141592) {
 		x -= 6283185;
 	}
-	long second = 405284;
-	second = second * x / 1000000;
-	second = second * x / 1000000;
+	long long second = 405284;
+	second = second * x;
+	do_div(second, 1000000);
+	second = second * x;
+	do_div(second, 1000000);
 	if (x < 0) {
-		return (1273239 * x / 1000000 + second);
+		x = 1273239 * x;
+		do_div(x, 1000000);
+		return (x+second);
 	}
 	else {
-		return (1273239 * x / 1000000 - second);
+		x = 1273239 * x;
+		do_div(x, 1000000);
+		return (x - second);
+	}	
 }
 
-long apCos(long x) {
+long long apCos(long long x) {
 	x += 1570796;
+	return apSin(x);
+	/*
 	if (x < -3141592) {
 		x += 6283158;
 	}
 	else if (x > 3141592) {
 		x -= 6283158;
 	}
-	long second = 405284;
+	long long second = 405284;
 	second = second * x / 1000000;
 	second = second * x / 1000000;
 	if ( x < 0) {
@@ -384,21 +395,30 @@ long apCos(long x) {
 	else {
 		return (1273239 * x / 1000000 - second);
 	}
+	*/
 }
 
-long apArcTan(long x) {
-	long A = 77650;
-	long B = -287434;
-	long C = 3141592 / 4 - A - B;
-	long xx = x * x / 1000000;
-	long res = A * xx / 1000000 + B;
-	res = res * xx / 1000000 + C;
-	res = res * x / 1000000;
+long long apArcTan(long long x) {
+	long long A = 77650;
+	long long B = -287434;
+	long long C = 3141592; 
+	do_div(C, 4);
+	C = C - A - B;
+	long long xx = x * x;
+	do_div(xx, 1000000);
+	long long res = A * xx;
+	do_div(res, 1000000);
+	res = res + B;
+	res = res * xx;
+	do_div(res, 1000000);
+	res = res + C;
+	res = res * x;
+	do_div(res, 1000000);
 	return res;
 }
 
-long apSqrt(long x) {
-	int i;
+long long apSqrt(long long x) {
+	long long i;
 	for(i=1; ; i++) {
 		if (i*i > x) {
 			return i * 1000;
@@ -406,54 +426,70 @@ long apSqrt(long x) {
 	}
 }
 
-long getDistance(long lat1,long lng1, long lat2, long lng2) {
-	long radius = 6400;
-	long dLat = (lat2 - lat1) * 3141592 / 180 / 1000000;
-	long dLng = (lng2 - lng1) * 3141592 / 180 / 1000000;
+long long getDistance(long long lat1,long long lng1, long long lat2, long long lng2) {
+	long long radius = 6400;
+	long long dLat = (lat2 - lat1) * 3141592;
+	do_div(dLat, 180*1000000);
+	printk(KERN_EMERG "dLat: %lld\n", dLat);
+	long long dLng = (lng2 - lng1) * 3141592;
+	do_div(dLng, 180*1000000);
+	printk(KERN_EMERG "dLng: %lld\n", dLng);
+	long long pt1y = lng1 * 3141592;
+	do_div(pt1y, 180*1000000);
+	long long pt2y = lng2 * 3141592;
+	do_div(pt2y, 180*1000000);
 
-	long pt1y = lng1 * 3141592 / 180 / 1000000;
-	long pt2y = lng2 * 3141592 / 180 / 1000000;
+	printk(KERN_EMERG "pt1y: %lld\n", pt1y);
+	printk(KERN_EMERG "pt2y: %lld\n", pt2y);
+	do_div(dLat, 2);
+	do_div(dLng, 2);
+	long long a = apSin(dLat) * apSin(dLat);
+	do_div(a, 1000000);
+	long long second = apSin(dLng) * apSin(dLng);
+	do_div(second, 1000000);
 
-	double a = apSin(dLat/2) * apSin(dLat/2) / 1000000;
-	double second = apSin(dLng/2) * apSin(dLng/2) / 1000000;
-	second = second * apCos(pt1y) / 1000000;
-	second = second * apCos(pt2y) / 1000000;
+	printk(KERN_EMERG "a: %lld\n", a);
+	second = second * apCos(pt1y);
+	do_div(second, 1000000);
+	second = second * apCos(pt2y);
+	do_div(second, 1000000);
+	printk(KERN_EMERG "second: %lld\n", second);
 	a = a + second;
-	double b = apSqrt(a) * 1000000;
-	b = b / apSqrt(1000000-a);
-	double c = 2 * b;
+	long long b = apSqrt(a) * 1000000;
+	do_div(b, apSqrt(1000000-a));
+	long long c = 2 * b;
 
 	return radius * c;
 }
 
+#include "ext2/ext2.h"
 
 int gps_permissionCheck(struct inode *inode) {
 	struct gps_location cur_loc = get_gps_location();
 	struct ext2_inode_info *inode_info = EXT2_I(inode);
 
+	if(inode->i_op->get_gps_location==NULL)
+		return 0;
+
 	if (NULL == inode_info) {
 		return 0;
 	}
-	
+
 	int lat_integer = *((int *)&inode_info->i_lat_integer);
 	int lat_fractional = *((int *)&inode_info->i_lat_fractional);
 	int lng_integer = *((int *)&inode_info->i_lng_integer);
 	int lng_fractional = *((int *)&inode_info->i_lng_fractional);
 	int accuracy = *((int *)&inode_info->i_accuracy);
+	
+	long long lat1 = (long long) lat_integer * 1000000 + (long long) lat_fractional;
+	long long lng1 = (long long) lng_integer * 1000000 + (long long) lng_fractional;
+	long long lat2 = (long long) cur_loc.lat_integer * 1000000 + (long long) cur_loc.lat_fractional;
+	long long lng2 = (long long) cur_loc.lng_integer * 1000000 + (long long) cur_loc.lng_fractional;
 
-	long lat1 = (long) lat_integer * 1000000 + (long) lat_fractional;
-	long lng1 = (long) lng_integer * 1000000 + (long) lng_fractional;
-	long lat2 = (long) cur_loc.lat_integer * 1000000 + (long) cur_loc.lat_fractional;
-	long lng2 = (long) cur_loc.lng_integer * 1000000 + (long) cur_loc.lng_fractional;
-
-	prink(KERN_EMERG "x: %ld %ld\n dev : %ld %ld/n dis : %ld",lat1,lng1,lat2,lng2,getDistance(lat1,lng1,lat2,lng2));
+	printk(KERN_EMERG "x: %lld %lld\n dev : %lld %lld\n dis : %lld\n",lat1,lng1,lat2,lng2,getDistance(lat1,lng1,lat2,lng2));
 
 	return 0;
 
-	if (lat_integer == cur_loc.lat_integer && lng_integer == cur_loc.lng_integer) {
-		return 0;
-	}
-	return -EACCES;
 }
 
 /*
@@ -473,9 +509,11 @@ static inline int do_inode_permission(struct inode *inode, int mask)
 		inode->i_opflags |= IOP_FASTPERM;
 		spin_unlock(&inode->i_lock);
 	}
-	if(gps_permissonCheck(inode) == -EACCES) {
+	
+	if(gps_permissionCheck(inode) == -EACCES) {
 		return -EACCES;
 	}
+	
 	return generic_permission(inode, mask);
 }
 

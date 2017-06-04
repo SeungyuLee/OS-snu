@@ -1607,13 +1607,15 @@ int ext2_set_gps_location(struct inode *inode)
 
 int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
 {
+	printk(KERN_EMERG "ext2_get_gps_location is called\n");
 	struct ext2_inode_info *inode_info = EXT2_I(inode);
 
-	loc->lat_integer = *((int *)inode_info->i_lat_integer);
-	loc->lat_fractional = *((int *)inode_info->i_lat_fractional);
-	loc->lng_integer = *((int *)inode_info->i_lng_integer);
-	loc->lng_fractional = *((int *)inode_info->i_lng_fractional);
-	loc->accuracy = *((int *)inode_info->i_accuracy);
+	printk(KERN_EMERG "%d\n", *((int *)&inode_info->i_lat_integer));
+	loc->lat_integer = *((int *)&inode_info->i_lat_integer);
+	loc->lat_fractional = *((int *)&inode_info->i_lat_fractional);
+	loc->lng_integer = *((int *)&inode_info->i_lng_integer);
+	loc->lng_fractional = *((int *)&inode_info->i_lng_fractional);
+	loc->accuracy = *((int *)&inode_info->i_accuracy);
 
 	return 0;
 }
