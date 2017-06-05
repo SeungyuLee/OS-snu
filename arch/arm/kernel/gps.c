@@ -40,6 +40,12 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 	if (copy_from_user(&k_loc, loc, sizeof(struct gps_location)))
 		return -EFAULT;
 
+	if (k_loc.lat_integer < -90 || k_loc.lat_integer > 90)
+		return -EINVAL;
+	
+	if (k_loc.lng_integer < -180 || k_loc.lng_integer > 180)
+		return -EINVAL;
+	
 	if (k_loc.lat_fractional < 0 || k_loc.lat_fractional > 999999)
 		return -EINVAL;
 	
