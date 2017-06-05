@@ -365,31 +365,31 @@ long long safety_div(long long x,long long y) {
 }
 
 long long apSin(long long x) { 
-	if (x < -3141592) {
-		x += 6283185;
+	if (x < -314159265) {
+		x += 628318531;
 	}
-	else if( x > 3141592) {
-		x -= 6283185;
+	else if( x > 314159265) {
+		x -= 628318531;
 	}
-	long long second = 405284;
+	long long second = 40528473;
 	second = second * x;
-	second = safety_div(second, 1000000);
+	second = safety_div(second, 100000000);
 	second = second * x;
-	second = safety_div(second, 1000000);
+	second = safety_div(second, 100000000);
 	if (x < 0) {
-		x = 1273239 * x;
-		x = safety_div(x, 1000000);
+		x = 127323954 * x;
+		x = safety_div(x, 100000000);
 		return (x+second);
 	}
 	else {
-		x = 1273239 * x;
-		x = safety_div(x, 1000000);
+		x = 127323954 * x;
+		x = safety_div(x, 100000000);
 		return (x - second);
 	}	
 }
 
 long long apCos(long long x) {
-	x += 1570796;
+	x += 157079632;
 	return apSin(x);
 	/*
 	if (x < -3141592) {
@@ -410,69 +410,119 @@ long long apCos(long long x) {
 	*/
 }
 
-long long apArcTan(long long x) {
-	long long A = 77650;
-	long long B = -287434;
-	long long C = 3141592; 
-	C = safety_div(C, 4);
-	C = C - A - B;
-	long long xx = x * x;
-	xx = safety_div(xx, 1000000);
-	long long res = A * xx;
-	res = safety_div(res, 1000000);
-	res = res + B;
-	res = res * xx;
-	res = safety_div(res, 1000000);
-	res = res + C;
-	res = res * x;
-	res = safety_div(res, 1000000);
+long long apPow(long long x, int num) {
+	long long res = x;
+	int i;
+	for(i=1;i<num;i++) {
+		res = res * x;
+		res = safety_div(res,100000000);
+	}
 	return res;
+}
+
+long long apArcTan(long long x) {
+  long long res;
+  if (x > 500000000) return 157079632;
+  else if (x > 150000000) {
+    res = 874060 * apPow(x,3);
+    res = safety_div(res,100000000);
+    long long second = 11491073 * apPow(x,2);
+    second = safety_div(second,100000000);
+    long long third = 55473370 * x;
+    third = safety_div(third,100000000);
+    res = res - second + third + 38484160;
+  }else {
+    res = -27216489 * apPow(x,2);
+    printf("apPow(x,2) : %lld\n",apPow(x,2));
+    res = safety_div(res,100000000);
+    printf("res1 : %lld\n",res);
+    long long second = 106084777 * x;
+    second = safety_div(res,100000000);
+    printf("second: %lld\n",second);
+    res = res + second - 131597;
+    printf("res2: %lld\n",res);
+  }
+  return res;
 }
 
 long long apSqrt(long long x) {
 	long long i;
 	for(i=1; ; i++) {
 		if (i*i > x) {
-			return (i-1) * 1000;
+			return (i-1) * 10000;
 		}
 	}
 }
 
+long long smallDis(long long lat1, long long lng1, long long lat2, long long lng2) {
+  long long dLat = lat2 - lat1;
+  long long dLng = lng2 - lng1;
+  
+  
+  long long height_big = 11132100000 * dLat;
+  long long base_big = 8500000000 * dLng;
+  
+  printf("height_big: %ld\n", height_big);
+  printf("base_big: %ld\n", base_big);
+  if(height_big < 0) height_big = -height_big;
+  if(base_big < 0) base_big = -base_big;
+  
+  long longer_side = 0;
+  long shorter_side = 0;
+  
+  if(height_big > base_big){
+    longer_side = height_big;
+    shorter_side = base_big;
+  }else{
+    longer_side = base_big;
+    shorter_side = height_big;
+  }
+  
+  printk(KERN_EMERG "longer_side: %lld\n", longer_side);
+  printk(KERN_EMERG "shorter_side: %lld\n", shorter_side);
+  long long diagonal = (longer_side*7)/8 + shorter_side/2;
+  
+  return diagonal;
+}
+
 long long getDistance(long long lat1,long long lng1, long long lat2, long long lng2) {
-	long long radius = 6400;
+	long long radius = 6371;
 	long long dLat = (lat2 - lat1) * 3141592;
-	dLat = safety_div(dLat, 180*1000000);
+	dLat = safety_div(dLat, 180*10000);
 	printk(KERN_EMERG "dLat: %lld\n", dLat);
 	long long dLng = (lng2 - lng1) * 3141592;
-	dLng = safety_div(dLng, 180*1000000);
+	dLng = safety_div(dLng, 180*10000);
 	printk(KERN_EMERG "dLng: %lld\n", dLng);
 	long long pt1y = lng1 * 3141592;
-	pt1y = safety_div(pt1y, 180*1000000);
+	pt1y = safety_div(pt1y, 180*10000);
 	long long pt2y = lng2 * 3141592;
-	pt2y = safety_div(pt2y, 180*1000000);
+	pt2y = safety_div(pt2y, 180*10000);
 
 	printk(KERN_EMERG "pt1y: %lld\n", pt1y);
 	printk(KERN_EMERG "pt2y: %lld\n", pt2y);
 	dLat = safety_div(dLat, 2);
 	dLng = safety_div(dLng, 2);
 	long long a = apSin(dLat) * apSin(dLat);
-	a = safety_div(a, 1000000);
+	a = safety_div(a, 100000000);
 	long long second = apSin(dLng) * apSin(dLng);
-	second = safety_div(second, 1000000);
+	second = safety_div(second, 100000000);
 
 	printk(KERN_EMERG "a: %lld\n", a);
 	second = second * apCos(pt1y);
-	second = safety_div(second, 1000000);
+	second = safety_div(second, 100000000);
 	second = second * apCos(pt2y);
-	second = safety_div(second, 1000000);
+	second = safety_div(second, 100000000);
 	printk(KERN_EMERG "second: %lld\n", second);
 	a = a + second;
-	long long b = apSqrt(a) * 1000000;
+	long long b = apSqrt(a) * 100000000;
 	printk(KERN_EMERG "apSqrt(a): %lld\n", apSqrt(a));
-	b = safety_div(b, apSqrt(1000000-a));
-	printk(KERN_EMERG "apSqrt(1000000-a): %lld\n", apSqrt(1000000-a));
+	b = safety_div(b, apSqrt(100000000-a));
+	printk(KERN_EMERG "apSqrt(100000000-a): %lld\n", apSqrt(100000000-a));
 	printk(KERN_EMERG "b: %lld\n", b);
 	long long c = 2 * apArcTan(b);
+	if (c < 0) {
+	  return smallDis(lat1,lng1,lat2,lng2);
+	}
 
 	return radius * c;
 }
