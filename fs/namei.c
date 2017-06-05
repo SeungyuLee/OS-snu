@@ -469,7 +469,7 @@ long long getDistance(long long lat1,long long lng1, long long lat2, long long l
 	a = a + second;
 	long long b = apSqrt(a) * 1000000;
 	b = safety_div(b, apSqrt(1000000-a));
-	long long c = 2 * b;
+	long long c = 2 * apArctan(b);
 
 	return radius * c;
 }
