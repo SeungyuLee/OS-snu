@@ -484,8 +484,11 @@ long long getDistance(long long lat1,long long lng1, long long lat2, long long l
 	printk(KERN_EMERG "second: %lld\n", second);
 	a = a + second;
 	long long b = apSqrt(a) * 1000000;
+	printk(KERN_EMERG "apSqrt(a): %lld\n", apSqrt(a));
 	b = safety_div(b, apSqrt(1000000-a));
-	long long c = 2 * apArctan(b);
+	printk(KERN_EMERG "apSqrt(1000000-a): %lld\n", apSqrt(1000000-a));
+	printk(KERN_EMERG "b: %lld\n", b);
+	long long c = 2 * apArcTan(b);
 
 	return radius * c;
 }
