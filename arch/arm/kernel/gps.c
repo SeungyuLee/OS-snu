@@ -69,35 +69,34 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
 	/* this syscall has to be reviewed again */
-	// char *k_pathname;
+	char *k_pathname;
 	struct gps_location k_loc;
 	struct inode *inode;
 	struct path path;
 	int result;
 
-	int path_length = PATH_MAX + 1;
 	if(pathname == NULL || loc == NULL){
 		printk("pathname is null or loc is null error\n");
 		return -EINVAL;
 	}
-/*
-	k_pathname = kmalloc(path_length * sizeof(char), GFP_KERNEL);
+
+	k_pathname = kcalloc(PATH_MAX, sizeof(char), GFP_KERNEL);
 	
 	if(k_pathname == NULL){
 		printk("No memory for k_pathname\n");
 		return -ENOMEM;
 	}
 	
-	result = strncpy_from_user(k_pathname, pathname, path_length);
+	result = strncpy_from_user(k_pathname, pathname, PATH_MAX);
 	
-	if(result < 0 || result > path_length){
+	if(result < 0){
 		kfree(k_pathname);
-		printk("pathname is invalid\n");
+		printk("strncpy_from_user error\n");
 		return -EFAULT;
 	}
-*/
-	if(kern_path(pathname, LOOKUP_FOLLOW, &path)){
-	//	kfree(k_pathname);
+
+	if(kern_path(k_pathname, LOOKUP_FOLLOW, &path)){
+		kfree(k_pathname);
 		printk("cannot find the path\n");
 		return -EINVAL;
 	}
@@ -105,14 +104,14 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 	inode = path.dentry->d_inode;
 
 	if(!(S_IRUSR & inode->i_mode)){
-	//	kfree(k_pathname);
+		kfree(k_pathname);
 		printk("Access error\n");
 		return -EACCES;
 	}
 
 
 	if(inode->i_op->get_gps_location==NULL){
-	//	kfree(k_pathname);
+		kfree(k_pathname);
 		printk("No get_gps_location inode operation\n");
 		return -ENODEV;
 	}
@@ -120,12 +119,12 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 		inode->i_op->get_gps_location(inode, &k_loc);
 
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
-	//	kfree(k_pathname);
+		kfree(k_pathname);
 		printk("copy to user failed\n");
 		return -EFAULT;
 	}
 
-//	kfree(k_pathname);
+	kfree(k_pathname);
 	return 0;
 }
 
