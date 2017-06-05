@@ -59,6 +59,12 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 	if (copy_from_user(&k_loc, loc, sizeof(struct gps_location)))
 		return -EFAULT;
 
+	if (k_loc.lat_integer < -90 || k_loc.lat_integer > 90)
+		return -EINVAL;
+	
+	if (k_loc.lng_integer < -180 || k_loc.lng_integer > 180)
+		return -EINVAL;
+	
 	if (k_loc.lat_fractional < 0 || k_loc.lat_fractional > 999999)
 		return -EINVAL;
 	
@@ -84,48 +90,59 @@ In `sys_set_gps_location` systemcall, location information from user space is st
 ```c
 asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_location __user *loc)
 {
+	/* this syscall has to be reviewed again */
 	char *k_pathname;
 	struct gps_location k_loc;
 	struct inode *inode;
-	struct path k_path;
+	struct path path;
 	int result;
 
-	int path_length = PATH_MAX + 1;
-	if(pathname == NULL || loc == NULL)
+	if(pathname == NULL || loc == NULL){
+		printk("pathname is null or loc is null error\n");
 		return -EINVAL;
-	k_pathname = kmalloc(path_length * sizeof(char), GFP_KERNEL);
-	if(k_pathname == NULL)
+	}
+
+	k_pathname = kcalloc(PATH_MAX, sizeof(char), GFP_KERNEL);
+	
+	if(k_pathname == NULL){
+		printk("No memory for k_pathname\n");
 		return -ENOMEM;
+	}
 	
-	result = strncpy_from_user(k_pathname, pathname, path_length);
+	result = strncpy_from_user(k_pathname, pathname, PATH_MAX);
 	
-	if(result <= 0 || result > path_length){
+	if(result < 0){
 		kfree(k_pathname);
+		printk("strncpy_from_user error\n");
 		return -EFAULT;
 	}
 
-	if(kern_path(pathname, LOOKUP_FOLLOW, &k_path)){
+	if(kern_path(k_pathname, LOOKUP_FOLLOW, &path)){
 		kfree(k_pathname);
+		printk("cannot find the path\n");
 		return -EINVAL;
 	}
 
-	inode = k_path.dentry->d_inode;
+	inode = path.dentry->d_inode;
 
 	if(!(S_IRUSR & inode->i_mode)){
 		kfree(k_pathname);
+		printk("Access error\n");
 		return -EACCES;
 	}
 
 
 	if(inode->i_op->get_gps_location==NULL){
 		kfree(k_pathname);
+		printk("No get_gps_location inode operation\n");
 		return -ENODEV;
 	}
 	else
 		inode->i_op->get_gps_location(inode, &k_loc);
-	
+
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
 		kfree(k_pathname);
+		printk("copy to user failed\n");
 		return -EFAULT;
 	}
 
@@ -211,33 +228,18 @@ ext2_get_gps_location: Takes the inode and struct gps_location as arguments and 
 - fs/indoe.c
 
 ```c
-static int update_time(struct inode *inode, struct timespec *time, int flags)
+int file_update_time(struct file *file)
 {
-	if (inode->i_op->update_time)
-		return inode->i_op->update_time(inode, time, flags);
-
-	if (flags & S_ATIME)
-		inode->i_atime = *time;
-	if (flags & S_VERSION)
-		inode_inc_iversion(inode);
-	if (flags & S_CTIME){ /* when the file is created */
-		inode->i_ctime = *time;
-		// TODO: check
-		if(inode->i_op->set_gps_location)
-			inode->i_op->set_gps_location(inode);	
+	...
+	if(inode->i_op->set_gps_location){
+		printk(KERN_EMERG "set_gps_location(inode) call by file_update_time\n");
+		inode->i_op->set_gps_location(inode);	
 	}
-	if (flags & S_MTIME){ /* when the file is modified */
-		inode->i_mtime = *time;
-		// TODO: check
-		if(inode->i_op->set_gps_location)
-			inode->i_op->set_gps_location(inode);
-	}
-	mark_inode_dirty_sync(inode);
-	return 0;
+	...
 }
 ```
 
-GPS info of regular files is updated whenever they are created or modified. `update_time` function calls `set_gps_location` function because the i_mtime (modified time) value is modified here (this function is called if the inode is modified).
+GPS info of regular files is updated whenever they are created or modified(When i_mtime (modified time) value is modified). Therefore `file_update_time` function calls `set_gps_location` function.
 
 - fs/ext2/ext2.h
 
@@ -290,40 +292,7 @@ The GPS-related operations are defined to inode_operation.
 
 - fs/namei.c
 
-```c
-int gps_permissionCheck(struct inode *inode) {
-	struct gps_location cur_loc = get_gps_location();
-	struct ext2_inode_info *inode_info = EXT2_I(inode);
-
-	if (NULL == inode_info) {
-		return 0;
-	}
-	
-	int lat_integer = *((int *)&inode_info->i_lat_integer);
-	int lat_fractional = *((int *)&inode_info->i_lat_fractional);
-	int lng_integer = *((int *)&inode_info->i_lng_integer);
-	int lng_fractional = *((int *)&inode_info->i_lng_fractional);
-	int accuracy = *((int *)&inode_info->i_accuracy);
-
-	if (lat_integer == cur_loc.lat_integer && lng_integer == cur_loc.lng_integer) {
-		return 0;
-	}
-	return -EACCES;
-}
-
-...
-
-static inline int do_inode_permission(struct inode *inode, int mask)
-{
-	...
-	if(gps_permisson(inode) == -EACCES) {
-		return -EACCES;
-	}
-	...
-}
-```
-
-
+accuracy check 
 
 - test/gpsudate.c
 
