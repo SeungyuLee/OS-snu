@@ -410,30 +410,46 @@ long long apCos(long long x) {
 	*/
 }
 
-long long apArcTan(long long x) {
-	long long A = 77650;
-	long long B = -287434;
-	long long C = 3141592; 
-	C = safety_div(C, 4);
-	C = C - A - B;
-	long long xx = x * x;
-	xx = safety_div(xx, 1000000);
-	long long res = A * xx;
-	res = safety_div(res, 1000000);
-	res = res + B;
-	res = res * xx;
-	res = safety_div(res, 1000000);
-	res = res + C;
-	res = res * x;
-	res = safety_div(res, 1000000);
+long long apPow(long long x, int num) {
+	long long res = x;
+	int i;
+	for(i=1;i<num;i++) {
+		res = res * x;
+		res = safety_div(res,100000000);
+	}
 	return res;
+}
+
+long long apArcTan(long long x) {
+  long long res;
+  if (x > 500000000) return 157079632;
+  else if (x > 150000000) {
+    res = 874060 * apPow(x,3);
+    res = safety_div(res,100000000);
+    long long second = 11491073 * apPow(x,2);
+    second = safety_div(second,100000000);
+    long long third = 55473370 * x;
+    third = safety_div(third,100000000);
+    res = res - second + third + 38484160;
+  }else {
+    res = -27216489 * apPow(x,2);
+    printf("apPow(x,2) : %lld\n",apPow(x,2));
+    res = safety_div(res,100000000);
+    printf("res1 : %lld\n",res);
+    long long second = 106084777 * x;
+    second = safety_div(res,100000000);
+    printf("second: %lld\n",second);
+    res = res + second - 131597;
+    printf("res2: %lld\n",res);
+  }
+  return res;
 }
 
 long long apSqrt(long long x) {
 	long long i;
 	for(i=1; ; i++) {
 		if (i*i > x) {
-			return i * 1000;
+			return (i-1) * 1000;
 		}
 	}
 }
