@@ -391,23 +391,6 @@ long long apSin(long long x) {
 long long apCos(long long x) {
 	x += 157079632;
 	return apSin(x);
-	/*
-	if (x < -3141592) {
-		x += 6283158;
-	}
-	else if (x > 3141592) {
-		x -= 6283158;
-	}
-	long long second = 405284;
-	second = second * x / 1000000;
-	second = second * x / 1000000;
-	if ( x < 0) {
-		return (1273239 * x / 1000000 + second);
-	}
-	else {
-		return (1273239 * x / 1000000 - second);
-	}
-	*/
 }
 
 long long apPow(long long x, int num) {
@@ -433,14 +416,10 @@ long long apArcTan(long long x) {
     res = res - second + third + 38484160;
   }else {
     res = -27216489 * apPow(x,2);
-    printf("apPow(x,2) : %lld\n",apPow(x,2));
     res = safety_div(res,100000000);
-    printf("res1 : %lld\n",res);
     long long second = 106084777 * x;
-    second = safety_div(res,100000000);
-    printf("second: %lld\n",second);
+    second = safety_div(second,100000000);
     res = res + second - 131597;
-    printf("res2: %lld\n",res);
   }
   return res;
 }
@@ -457,18 +436,25 @@ long long apSqrt(long long x) {
 long long smallDis(long long lat1, long long lng1, long long lat2, long long lng2) {
   long long dLat = lat2 - lat1;
   long long dLng = lng2 - lng1;
-  
-  
+
+  long long lng_distance_by_lat = 0;
+  if(lng1 <= 30 && lng1 >= -30)
+	  lng_distance_by_lat = 10740000000;
+  else if(lng1 > 60 || lng1 < -60)
+	  lng_distance_by_lat = 2878000000;
+  else
+	  lng_distance_by_lat = 7863000000;
+
   long long height_big = 11132100000 * dLat;
-  long long base_big = 8500000000 * dLng;
+  height_big = safety_div(height_big,1000000);
+  long long base_big = lng_distance_by_lat * dLng;
+  base_big = safety_div(base_big,1000000);
   
-  printf("height_big: %ld\n", height_big);
-  printf("base_big: %ld\n", base_big);
   if(height_big < 0) height_big = -height_big;
   if(base_big < 0) base_big = -base_big;
   
-  long longer_side = 0;
-  long shorter_side = 0;
+  long long longer_side = 0;
+  long long shorter_side = 0;
   
   if(height_big > base_big){
     longer_side = height_big;
@@ -478,28 +464,21 @@ long long smallDis(long long lat1, long long lng1, long long lat2, long long lng
     shorter_side = height_big;
   }
   
-  printk(KERN_EMERG "longer_side: %lld\n", longer_side);
-  printk(KERN_EMERG "shorter_side: %lld\n", shorter_side);
   long long diagonal = (longer_side*7)/8 + shorter_side/2;
-  
   return diagonal;
 }
 
-long long getDistance(long long lat1,long long lng1, long long lat2, long long lng2) {
+int getDistance(long long lat1,long long lng1, long long lat2, long long lng2) {
 	long long radius = 6371;
 	long long dLat = (lat2 - lat1) * 3141592;
 	dLat = safety_div(dLat, 180*10000);
-	printk(KERN_EMERG "dLat: %lld\n", dLat);
 	long long dLng = (lng2 - lng1) * 3141592;
 	dLng = safety_div(dLng, 180*10000);
-	printk(KERN_EMERG "dLng: %lld\n", dLng);
-	long long pt1y = lng1 * 3141592;
+	long long pt1y = lat1 * 3141592;
 	pt1y = safety_div(pt1y, 180*10000);
-	long long pt2y = lng2 * 3141592;
+	long long pt2y = lat2 * 3141592;
 	pt2y = safety_div(pt2y, 180*10000);
 
-	printk(KERN_EMERG "pt1y: %lld\n", pt1y);
-	printk(KERN_EMERG "pt2y: %lld\n", pt2y);
 	dLat = safety_div(dLat, 2);
 	dLng = safety_div(dLng, 2);
 	long long a = apSin(dLat) * apSin(dLat);
@@ -507,24 +486,22 @@ long long getDistance(long long lat1,long long lng1, long long lat2, long long l
 	long long second = apSin(dLng) * apSin(dLng);
 	second = safety_div(second, 100000000);
 
-	printk(KERN_EMERG "a: %lld\n", a);
 	second = second * apCos(pt1y);
 	second = safety_div(second, 100000000);
 	second = second * apCos(pt2y);
 	second = safety_div(second, 100000000);
-	printk(KERN_EMERG "second: %lld\n", second);
 	a = a + second;
 	long long b = apSqrt(a) * 100000000;
-	printk(KERN_EMERG "apSqrt(a): %lld\n", apSqrt(a));
 	b = safety_div(b, apSqrt(100000000-a));
-	printk(KERN_EMERG "apSqrt(100000000-a): %lld\n", apSqrt(100000000-a));
-	printk(KERN_EMERG "b: %lld\n", b);
 	long long c = 2 * apArcTan(b);
+	int intRes;
 	if (c < 0) {
-	  return smallDis(lat1,lng1,lat2,lng2);
+	  intRes = (int)safety_div(smallDis(lat1,lng1,lat2,lng2),100000);
 	}
-
-	return radius * c;
+	else {
+		intRes = (int)safety_div(radius * c,100000);
+	}
+	return intRes;
 }
 
 #include "ext2/ext2.h"
@@ -551,7 +528,12 @@ int gps_permissionCheck(struct inode *inode) {
 	long long lat2 = (long long) cur_loc.lat_integer * 1000000 + (long long) cur_loc.lat_fractional;
 	long long lng2 = (long long) cur_loc.lng_integer * 1000000 + (long long) cur_loc.lng_fractional;
 
-	printk(KERN_EMERG "x: %lld %lld\n dev : %lld %lld\n dis : %lld\n",lat1,lng1,lat2,lng2,getDistance(lat1,lng1,lat2,lng2));
+	int distance = getDistance(lat1,lng1,lat2,lng2);
+	printk(KERN_DEBUG "file coordinates: %lld %lld\n device coordinates : %lld %lld\n distance : %d\n",lat1,lng1,lat2,lng2,distance);
+
+	if ( accuracy + cur_loc.accuracy < distance && distance != 0) {
+		return -EACCES;
+	}
 
 	return 0;
 
