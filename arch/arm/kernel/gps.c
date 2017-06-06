@@ -4,6 +4,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/gps.h>
+#include <linux/fs.h>
 #include <linux/namei.h>
 
 static struct gps_location dev_location = {
@@ -112,6 +113,18 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 	}
 	else
 		inode->i_op->get_gps_location(inode, &k_loc);
+	
+	long long lat1 = (long long)k_loc.lat_integer * 1000000 + (long long)k_loc.lat_fractional;
+	long long lng1 = (long long)k_loc.lng_integer * 1000000 + (long long)k_loc.lng_fractional;
+	long long lat2 = (long long)dev_location.lat_integer * 1000000 + (long long)dev_location.lat_fractional;
+	long long lng2 = (long long)dev_location.lng_integer * 1000000 + (long long)dev_location.lng_fractional;
+
+	int distance = getDistance(lat1,lng1,lat2,lng2);
+	if(k_loc.accuracy + dev_location.accuracy <= distance) {
+		kfree(k_pathname);
+		printk("gps location : access denied");
+		return -EACCES;
+	}
 
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
 		kfree(k_pathname);
