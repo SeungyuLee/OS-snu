@@ -225,21 +225,7 @@ int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
 ext2_set_gps_location: Takes the inode as an argument and puts information corresponding to gps_location in the corresponding inode.
 ext2_get_gps_location: Takes the inode and struct gps_location as arguments and puts the information corresponding to gps_location in the corresponding inode into the struct gps_location.
 
-- fs/indoe.c
 
-```c
-int file_update_time(struct file *file)
-{
-	...
-	if(inode->i_op->set_gps_location){
-		printk(KERN_EMERG "set_gps_location(inode) call by file_update_time\n");
-		inode->i_op->set_gps_location(inode);	
-	}
-	...
-}
-```
-
-GPS info of regular files is updated whenever they are created or modified(When i_mtime (modified time) value is modified). Therefore `file_update_time` function calls `set_gps_location` function.
 
 - fs/ext2/ext2.h
 
@@ -286,13 +272,87 @@ struct inode_operations {
 	int (*set_gps_location)(struct inode *);
 	int (*get_gps_location)(struct inode *, struct gps_location *);
 	...
+};
 ```
 
 The GPS-related operations are defined to inode_operation.
 
 - fs/namei.c
 
-accuracy check 
+```c
+long long safety_div(long long x,long long y);
+long long apSin(long long x);
+long long apCos(long long x);
+long long apPow(long long x, int num);
+long long apArcTan(long long x);
+long long apSqrt(long long x);
+long long smallDis(long long lat1, long long lng1, long long lat2, long long lng2);
+int getDistance(long long lat1,long long lng1, long long lat2, long long lng2);
+
+int gps_permissionCheck(struct inode *inode);
+
+static inline int do_inode_permission(struct inode *inode, int mask)
+{
+	...
+	if(gps_permissionCheck(inode) == -EACCES) {
+		return -EACCES;
+	}
+	...
+}
+```
+
+Calculation functions and a permission check functions ard added for location-based file access. More details on assumptions for calculations can be found below.
+
+
+< The process calling set_gps_location when a File is created/modified >
+
+1) fs/ext2/namei.c
+
+```c
+static int ext2_create (struct inode * dir, struct dentry * dentry, umode_t mode, bool excl)
+{
+	...
+	if(inode->i_op->set_gps_location!=NULL){
+		printk(KERN_DEBUG "ext2_set_gps_location is called in ext2_create");
+		inode->i_op->set_gps_location(inode);
+	}
+	...
+}
+```
+
+In `ext2_create` gps_location is set when the file is created.
+
+2) fs/indoe.c
+
+```c
+int file_update_time(struct file *file)
+{
+	...
+	if(inode->i_op->set_gps_location){
+		printk(KERN_EMERG "set_gps_location(inode) call by file_update_time\n");
+		inode->i_op->set_gps_location(inode);	
+	}
+	...
+}
+```
+
+In `update_time` function When i_mtime changes, that is, When File is modified, gps_location is set.
+
+3) fs/read_write.c
+
+```c
+ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
+{
+	...
+	if(inode->i_op->set_gps_location){	
+			printk(KERN_DEBUG "set_gps_location by vfs_write\n");
+			inode->i_op->set_gps_location(inode);
+	}
+	...
+```
+
+In `vfs_write` function gps_location is also set if the update_time function is not called (ex: when overwriting via echo)
+
 
 - test/gpsudate.c
 
@@ -333,10 +393,78 @@ struct ext2_inode_large {
 
 ### 4. Location-based file access
 
+* Distance calaulation method
 
+	- Sin approximation
+	
+	```
+	if (x < 0)
+	    sin = 1.27323954 * x + .405284735 * x * x;
+	else
+	    sin = 1.27323954 * x - 0.405284735 * x * x;
+	```
+		
+	- Cos approximation
+	
+	Sin + pi/2
+	
+	- Tan approximation
+	
+	```
+	if (x > 5)
+		pi / 2
+	else if (1.5 <= x && x <= 5) 
+		0.008746 * x^3 - 0.11491073 * x^2 + 0.55473370 * x + 0.38484160
+	else if (1.5 > x) 
+		-0.27216489 * x^2 + 1.06084777 * x - 0.00131597
+	```
+	
+	Assuming that the earth is a 6371-km-long sphere, the distance is calculated using the formula for calculating the length of the arc in the coordinates. At this time, the ArcTan approximation formula becomes smaller than 0, which is caused by an error at a very short distance. Assuming a flat surface at this time, we assume 111.321 km per latitude, and the distance per 1 degree of latitude assumes different values depending on the latitude value.
+
+	1) 0 to 30 degrees: 107.4km (based on 15 degrees)
+	2) 30 to 60 degrees: 78.63 km (based on 45 degrees)
+	3) 60 to 90 degrees: 28.7 km (75 degrees)
+
+	After assuming this, we obtained the distance using Pythagoras approximation. If both the longitude and latitude differ by more than 0.5 degrees, use the formula to find the length of the arc. In the opposite case, it is assumed that it is a plane and then it is calculated.
+	
 
 ### 5. Result
 
+File structure of proj4.fs created of the form:
+
+```
+|-- proj4
+|      -- 301.txt
+|      -- 302.txt
+|      -- eiffel_tower.txt
+|      -- times_square.txt
+```
+
+The following is the output that we used to test.
+
+	./file_loc proj4/301.txt
+	latitude : 37.450141
+	longitude : 126.952550
+	accuracy : 50
+
+	./file_loc proj4/302.txt
+	latitude : 37.448279
+	longitude : 126.952550
+	accuracy : 50
+
+	./file_loc proj4/eiffel_tower.txt
+	latitude : 48.858384
+	longitude : 2.294503
+	accuracy : 100
+
+	./file_loc proj4/times_square.txt
+	latitude : 40.758862
+	longitude : -73.985100
+	accuracy : 100
+
+More detailed tests can be found in the demo video :
+
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/https://youtu.be/Hzpif05dVF0/0.jpg)](http://www.youtube.com/watch?v=https://youtu.be/Hzpif05dVF0 "Demo Video")
 
 
 ## Lessons
