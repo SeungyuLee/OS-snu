@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include <linux/gps.h>
 #include <linux/namei.h>
+#include <linux/fs.h>
 
 static struct gps_location dev_location = {
 	.lat_integer = 0,
@@ -112,6 +113,9 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 	}
 	else
 		inode->i_op->get_gps_location(inode, &k_loc);
+
+	if(gps_permissionCheck(inode)==-EACCES)
+		return -EACCES;
 
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
 		kfree(k_pathname);

@@ -1570,6 +1570,9 @@ struct inode_operations {
 	int (*get_gps_location)(struct inode *, struct gps_location *);
 } ____cacheline_aligned;
 
+int gps_permissionCheck(struct inode *inode);
+int getDistance(long long lat1,long long lng1,long long lat2,long long lng2);
+
 ssize_t rw_copy_check_uvector(int type, const struct iovec __user * uvector,
 			      unsigned long nr_segs, unsigned long fast_segs,
 			      struct iovec *fast_pointer,
