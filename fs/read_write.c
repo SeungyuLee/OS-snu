@@ -440,6 +440,9 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 
 	ret = rw_verify_area(WRITE, file, pos, count);
 	if (ret >= 0) {
+		struct path *path = &file->f_path;
+		struct inode *inode = path->dentry->d_inode;
+
 		count = ret;
 		file_start_write(file);
 		if (file->f_op->write)
@@ -452,6 +455,11 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 		}
 		inc_syscw(current);
 		file_end_write(file);
+		
+		if(inode->i_op->set_gps_location){	
+			printk(KERN_EMERG "set_gps_location by vfs_write\n");
+			inode->i_op->set_gps_location(inode);
+		}		
 	}
 
 	return ret;

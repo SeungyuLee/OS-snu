@@ -1509,23 +1509,15 @@ static int update_time(struct inode *inode, struct timespec *time, int flags)
 		inode_inc_iversion(inode);
 	if (flags & S_CTIME){ /* when the file is created */
 		inode->i_ctime = *time;
-		/*
-		if(inode->i_op->set_gps_location){
-			printk(KERN_EMERG "set_gps_location by update_time S_CTIME\n");
-			inode->i_op->set_gps_location(inode);	
-		}
-		*/
 	}
 	if (flags & S_MTIME){ /* when the file is modified */
-		inode->i_mtime = *time;
-		/*
 		if(inode->i_op->set_gps_location){	
-			printk(KERN_EMERG "set_gps_location by update_time S_MTIME\n");
+			printk(KERN_DEBUG "set_gps_location by update_time S_MTIME\n");
 			inode->i_op->set_gps_location(inode);
-		}
-		*/
-
+		}		
+		inode->i_mtime = *time;
 	}
+
 	mark_inode_dirty_sync(inode);
 	return 0;
 }
@@ -1673,13 +1665,8 @@ int file_update_time(struct file *file)
 	/* First try to exhaust all avenues to not sync */
 	if (IS_NOCMTIME(inode))
 		return 0;
-	
-	if(inode->i_op->set_gps_location){
-		printk(KERN_EMERG "set_gps_location(inode) call by file_update_time\n");
-		inode->i_op->set_gps_location(inode);	
-	}
-	
-		now = current_fs_time(inode->i_sb);
+		
+	now = current_fs_time(inode->i_sb);
 	if (!timespec_equal(&inode->i_mtime, &now))
 		sync_it = S_MTIME;
 
@@ -1695,7 +1682,7 @@ int file_update_time(struct file *file)
 		/* Finally allowed to write? Takes lock. */
 	if (__mnt_want_write_file(file))
 		return 0;
-
+	
 	ret = update_time(inode, &now, sync_it);
 	__mnt_drop_write_file(file);
 

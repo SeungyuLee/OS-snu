@@ -107,7 +107,7 @@ static int ext2_create (struct inode * dir, struct dentry * dentry, umode_t mode
 	inode->i_op = &ext2_file_inode_operations;
 	
 	if(inode->i_op->set_gps_location!=NULL){
-		printk(KERN_EMERG "ext2_set_gps_location is called in ext2_create");
+		printk(KERN_DEBUG "ext2_set_gps_location is called in ext2_create");
 		inode->i_op->set_gps_location(inode);
 	}
 	

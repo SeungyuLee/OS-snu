@@ -29,11 +29,6 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 {
 	struct gps_location k_loc;
 
-	/*
-	// error handling on access right violation
-	if (current_uid() != 0 && current_euid() != 0)
-		return -EACCES;
-	*/
 	if (loc == NULL)
 		return -EINVAL;
 
