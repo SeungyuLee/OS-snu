@@ -347,6 +347,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 			inode->i_op->set_gps_location(inode);
 	}
 	...
+}
 ```
 
 In `vfs_write` function gps_location is also set if the update_time function is not called (ex: when overwriting via echo)
@@ -417,7 +418,7 @@ struct ext2_inode_large {
 		-0.27216489 * x^2 + 1.06084777 * x - 0.00131597
 	```
 	
-	Assuming that the earth is a 6371-km-long sphere, the distance is calculated using the formula for calculating the length of the arc in the coordinates. At this time, the ArcTan approximation formula becomes smaller than 0, which is caused by an error at a very short distance. Assuming a flat surface at this time, we assume 111.321 km per latitude, and the distance per 1 degree of latitude assumes different values depending on the latitude value.
+	Assuming that the earth is a 6371-km-long sphere, the distance is calculated using the formula for calculating the length of the arc in the coordinates. At this time, the ArcTan approximation formula becomes smaller than 0, which is caused by an error at a very short distance. Assuming a flat surface at this time, we assume 111.321 km per 1 degree of latitude, and the distance per 1 degree of latitude assumes different values depending on the latitude value.
 
 	1) 0 to 30 degrees: 107.4km (based on 15 degrees)
 	2) 30 to 60 degrees: 78.63 km (based on 45 degrees)
