@@ -48,11 +48,6 @@ asmlinkage int sys_set_gps_location(struct gps_location __user *loc)
 {
 	struct gps_location k_loc;
 
-	/*
-	// error handling on access right violation
-	if (current_uid() != 0 && current_euid() != 0)
-		return -EACCES;
-	*/
 	if (loc == NULL)
 		return -EINVAL;
 
@@ -140,6 +135,9 @@ asmlinkage int sys_get_gps_location(const char __user *pathname, struct gps_loca
 	else
 		inode->i_op->get_gps_location(inode, &k_loc);
 
+	if(gps_permissionCheck(inode)==-EACCES)
+		return -EACCES;
+
 	if(copy_to_user(loc, &k_loc, sizeof(struct gps_location))){
 		kfree(k_pathname);
 		printk("copy to user failed\n");
@@ -223,8 +221,8 @@ int ext2_get_gps_location(struct inode *inode, struct gps_location *loc)
 ```
 
 ext2_set_gps_location: Takes the inode as an argument and puts information corresponding to gps_location in the corresponding inode.
-ext2_get_gps_location: Takes the inode and struct gps_location as arguments and puts the information corresponding to gps_location in the corresponding inode into the struct gps_location.
 
+ext2_get_gps_location: Takes the inode and struct gps_location as arguments and puts the information corresponding to gps_location in the corresponding inode into the struct gps_location.
 
 
 - fs/ext2/ext2.h
