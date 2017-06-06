@@ -334,7 +334,7 @@ int file_update_time(struct file *file)
 }
 ```
 
-In `update_time` function When i_mtime changes, that is, When File is modified, gps_location is set.
+In `update_time` function when i_mtime changes, that is, When File is modified, gps_location is set.
 
 3) fs/read_write.c
 
