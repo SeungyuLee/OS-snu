@@ -464,7 +464,7 @@ The following is the output that we used to test.
 
 More detailed tests can be found in the demo video :
 
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/https://youtu.be/Hzpif05dVF0/0.jpg)](http://www.youtube.com/watch?v=https://youtu.be/Hzpif05dVF0 "Demo Video")
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/Hzpif05dVF0/0.jpg)](https://youtu.be/Hzpif05dVF0)
 
 
 ## Lessons
