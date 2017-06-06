@@ -457,7 +457,7 @@ ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_
 		file_end_write(file);
 		
 		if(inode->i_op->set_gps_location){	
-			printk(KERN_EMERG "set_gps_location by vfs_write\n");
+			printk(KERN_DEBUG "set_gps_location by vfs_write\n");
 			inode->i_op->set_gps_location(inode);
 		}		
 	}
